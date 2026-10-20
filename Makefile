@@ -39,6 +39,9 @@ run-server: $(SERVER_NAME)
 run-cli: $(CLI_NAME)
 	./$(CLI_NAME)
 
+run-gui: $(GUI_NAME)
+	./$(GUI_NAME)
+
 clean:
 	rm -rf $(OBJ_DIR)
 
