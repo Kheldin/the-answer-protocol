@@ -1,38 +1,52 @@
-SERVER_NAME	= server
-CLI_NAME 		= cli
+SERVER_NAME = server
+CLI_NAME    = cli
 GUI_NAME		= gui
 
 CXX         = clang++
-CXXFLAGS    = -Wall -Wextra -Werror -std=c++23
+CXXFLAGS    = -Wall -Wextra -Werror -std=c++23 -MMD -MP
+GUIFLAGS		= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 
 
+OBJ_DIR     = obj
 
 SERVER_SRCS = src/server.cpp
-CLI_SRCS 		= src/cli_client.cpp
+CLI_SRCS    = src/cli_client.cpp
+GUI_SRCS		= src/client_gui.cpp
 
-ALL_OBJS    = $(SRCS:.cpp=.o)
-SERVER_OBJS = $(SERVER_SRCS:.cpp=.o)
-CLI_OBJS    = $(CLI_SRCS:.cpp=.o)
-# HEADERS			=
 
+SERVER_OBJS = $(SERVER_SRCS:%.cpp=$(OBJ_DIR)/%.o)
+CLI_OBJS    = $(CLI_SRCS:%.cpp=$(OBJ_DIR)/%.o)
+GUI_OBJS    = $(GUI_SRCS:%.cpp=$(OBJ_DIR)/%.o)
+DEPS        = $(SERVER_OBJS:.o=.d) $(CLI_OBJS:.o=.d) $(GUI_OBJS:.o=.d)
+
+all: $(SERVER_NAME) $(CLI_NAME)
 
 $(SERVER_NAME): $(SERVER_OBJS)
-	$(CXX) $(CXXFLAGS) $(SERVER_OBJS) -o $(SERVER_NAME)
-	./$(SERVER_NAME)
+	$(CXX) $(CXXFLAGS) $(SERVER_OBJS) -o $@
 
 $(CLI_NAME): $(CLI_OBJS)
-	$(CXX) $(CXXFLAGS) $(CLI_OBJS) -o $(CLI_NAME)
-	./$(CLI_NAME)
+	$(CXX) $(CXXFLAGS) $(CLI_OBJS) -o $@
 
-%.o: %.cpp Makefile
+$(GUI_NAME): $(GUI_OBJS)
+	$(CXX) $(CXXFLAGS) $(GUI_OBJS) -o $@ $(GUIFLAGS)
+
+$(OBJ_DIR)/%.o: %.cpp Makefile
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-fclean: clean
-	rm -f $(SERVER_NAME)
-	rm -f $(CLI_NAME)
+run-server: $(SERVER_NAME)
+	./$(SERVER_NAME)
+
+run-cli: $(CLI_NAME)
+	./$(CLI_NAME)
 
 clean:
-	rm -f $(SERVER_OBJS)
-	rm -f $(CLI_OBJS)
+	rm -rf $(OBJ_DIR)
+
+fclean: clean
+	rm -f $(SERVER_NAME) $(CLI_NAME) $(GUI_NAME)
 
 re: fclean all
-.PHONY: all clean fclean re
+
+-include $(DEPS)
+
+.PHONY: all clean fclean re run-server run-cli

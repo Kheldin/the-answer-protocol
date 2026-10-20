@@ -1,6 +1,10 @@
 # Prerequisites
 *.d
 
+gui
+server
+cli
+
 # Compiled Object files
 *.slo
 *.lo
