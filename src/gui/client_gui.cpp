@@ -18,13 +18,17 @@ int main(void)
 
     Rooms currentRoom {Reception};
 
-    Texture2D guy_left = LoadTexture("assets/normal_walk_left.png");
-    Texture2D guy_right = LoadTexture("assets/normal_walk_right.png");
-    Texture2D guy_front = LoadTexture("assets/normal_front.png");
-    Texture2D guy_back = LoadTexture("assets/normal_back.png");
+    Texture2D guy_left1 = LoadTexture("assets/normal/walk_left1.png");
+    Texture2D guy_left2 = LoadTexture("assets/normal/walk_left2.png");
+    Texture2D guy_left3 = LoadTexture("assets/normal/walk_left3.png");
+    Texture2D guy_right1 = LoadTexture("assets/normal/walk_right1.png");
+    Texture2D guy_right2 = LoadTexture("assets/normal/walk_right2.png");
+    Texture2D guy_right3 = LoadTexture("assets/normal/walk_right3.png");
+    Texture2D guy_front = LoadTexture("assets/normal/normal_front.png");
+    Texture2D guy_back = LoadTexture("assets/normal/normal_back.png");
     Texture2D current_guy = guy_front;
 
-    Rectangle frameRec_sides = { 0.0f, 0.0f, (float)current_guy.width/3, (float)current_guy.height };
+    Rectangle frameRec_sides = { 0.0f, 0.0f, (float)current_guy.width, (float)current_guy.height };
     Rectangle frameRec_faces = { 0.0f, 0.0f, (float)current_guy.width/2, (float)current_guy.height };
     bool frame_faces = true;
     int currentFrame = 0;
@@ -59,14 +63,24 @@ int main(void)
         {
             if (destRec.x < screenWidth - 50)
                 destRec.x += speed;
-            current_guy = guy_right;
+            if (currentFrame % 3 == 1)
+                current_guy = guy_right1;
+            else if (currentFrame % 3 == 2)
+                current_guy = guy_right2;
+            else
+                current_guy = guy_right3;
             frame_faces = false;
         }
         if (IsKeyDown(KEY_LEFT))
         {
             if (destRec.x > 3)
                 destRec.x -= speed;
-            current_guy = guy_left;
+            if (currentFrame % 3 == 1)
+                current_guy = guy_left1;
+            else if (currentFrame % 3 == 2)
+                current_guy = guy_left2;
+            else
+                current_guy = guy_left3;
             frame_faces = false;
         }
         if (IsKeyDown(KEY_DOWN))
@@ -112,7 +126,7 @@ int main(void)
             if (currentFrame >= max_frames) currentFrame = 0;
         }
 
-        int max_frames = frame_faces ? 2 : 3;
+        int max_frames = frame_faces ? 2 : 1;
         frameRec.width = (float)current_guy.width / max_frames;
         frameRec.height = (float)current_guy.height;
         frameRec.x = (float)currentFrame * frameRec.width;
@@ -142,8 +156,12 @@ int main(void)
     }
     UnloadTexture(current_guy);
     UnloadTexture(guy_front);
-    UnloadTexture(guy_left);
-    UnloadTexture(guy_right);
+    UnloadTexture(guy_left1);
+    UnloadTexture(guy_left2);
+    UnloadTexture(guy_left3);
+    UnloadTexture(guy_right1);
+    UnloadTexture(guy_right2);
+    UnloadTexture(guy_right3);
     CloseWindow();
 
     return 0;
