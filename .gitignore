@@ -1,9 +1,10 @@
 # Prerequisites
 *.d
 
-gui
-server
-cli
+# Executables
+gui.out
+server.out
+cli.out
 
 # Compiled Object files
 *.slo
