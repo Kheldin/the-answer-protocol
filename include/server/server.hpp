@@ -11,13 +11,25 @@ public:
   ~Server();
   int getfd() const { return sockfd; }
   void start_listening();
+  void run();
+  void handle_events(); // basically a switch case for each Poll event constant.
   pollfd monitor{};
   std::vector<pollfd> clients_fds{};
   int sockfd{-1};
 
 private:
+  void accept_new_client(int &clientSocket);
+  int receive_msg(int i, int &clientSocket);
 };
 
+class Client {
+public:
+  Client();
+  ~Client() { close(fd); }
+  int fd{-1};
+
+private:
+};
 // class Monitor {
 // public:
 //   Monitor() = default;

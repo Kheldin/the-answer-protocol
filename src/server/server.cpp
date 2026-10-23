@@ -31,7 +31,7 @@ Server::Server() {
       throw std::runtime_error("bind() failed.");
     }
   } catch (std::exception &e) {
-    std::cout << "An error occured during the server initialization: "
+    std::cout << "An error occured during the socket initialization: "
               << e.what() << "\n";
   }
 
@@ -41,80 +41,94 @@ Server::Server() {
   clients_fds.push_back(monitor);
 }
 
-void Server::start_listening() { listen(sockfd, 5); }
-
 Server::~Server() { close(sockfd); }
 
-int main(void) {
-  Server server{};
-  server.start_listening();
+void Server::start_listening() { listen(sockfd, 5); }
 
-  // the buffer who'll store the request
-  char buffer[1024]{0};
+void Server::accept_new_client(int &clientSocket) {
+  // Create a socket and a pollfd for the new client.
+  // Ask the kernel to check POLLIN event.
+  // Add it to the list so it will be watched at the next poll.
+  clientSocket = accept(getfd(), nullptr, nullptr);
+  std::cout << "New connection request." << "\n";
+  pollfd client{};
+  client.fd = clientSocket;
+  client.events = POLLIN;
+  client.revents = 0;
+  clients_fds.push_back(client);
+}
 
-  int clientSocket{0};
-  int res{0};
+int Server::receive_msg(int i, int &clientSocket) {
   int check{0};
+  char buffer[1024]{0};
+  check = recv(clientSocket, buffer, sizeof(buffer), 0);
+  std::cout << "check == " << i << " " << check << "\n";
+  // looking for errors or deconnections
+  if (check <= 0) {
+    close(clients_fds[i].fd);
+    clients_fds.erase(clients_fds.begin() + i);
+    --i; // compensate for the vector offset
+    std::cout << "The player " << clients_fds[i].fd
+              << " is deconnected or crash.\n";
+    return (1);
+  } else {
+    std::string msg(buffer);
+    // rm the last char while is not a normal char
+    while (!msg.empty() && (msg.back() == '\n' || msg.back() == '\r')) {
+      msg.pop_back();
+    }
+
+    if (msg == "QUIT") {
+      close(clients_fds[i].fd);
+      clients_fds.erase(clients_fds.begin() + i);
+      --i; // compensate for the vector offset
+      std::cout << "The player " << clients_fds[i].fd << " leave the game.\n";
+    } else if (msg == "SHUTDOWN") {
+      return (1);
+    } else {
+      std::cout << "|" << buffer << "|" << "\n";
+    }
+    return (0);
+  }
+}
+
+void Server::run() {
   bool run{true};
-
-  // the server infinite loop
+  int clientSocket{0};
   while (run) {
-    // start the radar with -1 means 'block infinitily while a thing move'
-    // fds.data() allows to give the C array from the vector to the C fonction
-    // poll()
-    res = poll(server.clients_fds.data(), server.clients_fds.size(), -1);
-
-    if (res < 0) {
+    // std::vector::data() return a pointer to the first elem of the
+    // container. poll() is a system call. The kernel will fill the
+    // pollfd.revents with what happended. poll() return:
+    //  The number of fds that received an events/errors.
+    //  0 means the system calls timed out before any fds is ready.
+    //  -1 = errors and errno is set to indicate the error.
+    // nb: Explain in readMe the choice of poll instead of epoll.
+    if (poll(clients_fds.data(), clients_fds.size(), -1) < 0) {
       std::cerr << "Error on poll()\n";
       break;
     }
 
-    // we go through the list to see who fd moved
-    for (size_t i{0}; i < server.clients_fds.size(); ++i) {
-      if (server.clients_fds[i].revents & POLLIN) {
+    // We go through the list to see which fd moved
+    for (size_t i{0}; i < clients_fds.size(); ++i) {
+      if (clients_fds[i].revents & POLLIN) {
+        // The index 0 is the server socket.
+        // If the server socket is readable, it means that a client wants to
+        // connect to the server.
         if (i == 0) {
-          clientSocket = accept(server.getfd(), nullptr, nullptr);
-
-          std::cout << "NEW PLAYER CONNECTED" << "\n";
-          pollfd client{};
-          client.fd = clientSocket;
-          client.events = POLLIN;
-          client.revents = 0;
-
-          server.clients_fds.push_back(client);
+          accept_new_client(clientSocket);
         } else {
-          check = recv(clientSocket, buffer, sizeof(buffer), 0);
-          // looking for errors or deconnections
-          if (check <= 0) {
-            close(server.clients_fds[i].fd);
-            server.clients_fds.erase(server.clients_fds.begin() + i);
-            --i; // compensate for the vector offset
-            std::cout << "The player " << server.clients_fds[i].fd
-                      << " is deconnected or crash.\n";
-          } else {
-            std::string msg(buffer);
-
-            // rm the last char while is not a normal char
-            while (!msg.empty() && (msg.back() == '\n' || msg.back() == '\r')) {
-              msg.pop_back();
-            }
-
-            if (msg == "QUIT") {
-              close(server.clients_fds[i].fd);
-              server.clients_fds.erase(server.clients_fds.begin() + i);
-              --i; // compensate for the vector offset
-              std::cout << "The player " << server.clients_fds[i].fd
-                        << " leave the game.\n";
-            } else if (msg == "SHUTDOWN") {
-              run = false;
-              break;
-            } else {
-              std::cout << "|" << buffer << "|" << "\n";
-            }
+          if (receive_msg(i, clientSocket) == 1) {
+            break;
           }
         }
       }
     }
   }
+}
+
+int main(void) {
+  Server server{};
+  server.start_listening();
+  server.run();
   return 0;
 }
