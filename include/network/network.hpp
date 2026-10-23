@@ -12,7 +12,8 @@ public:
   int getfd() const { return sockfd; }
   void start_listening();
   void run();
-  void handle_events(); // basically a switch case for each Poll event constant.
+  void handle_events(); // Not implemented yet: basically a switch case for each
+                        // Poll event constant.
   pollfd monitor{};
   std::vector<pollfd> clients_fds{};
   int sockfd{-1};

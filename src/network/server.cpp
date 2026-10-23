@@ -1,4 +1,4 @@
-#include "server/server.hpp"
+#include "network/network.hpp"
 #include <iostream>
 #include <netinet/in.h>
 #include <poll.h>
@@ -62,7 +62,6 @@ int Server::receive_msg(int i, int &clientSocket) {
   int check{0};
   char buffer[1024]{0};
   check = recv(clientSocket, buffer, sizeof(buffer), 0);
-  std::cout << "check == " << i << " " << check << "\n";
   // looking for errors or deconnections
   if (check <= 0) {
     close(clients_fds[i].fd);
@@ -74,17 +73,14 @@ int Server::receive_msg(int i, int &clientSocket) {
   } else {
     std::string msg(buffer);
     // rm the last char while is not a normal char
-    while (!msg.empty() && (msg.back() == '\n' || msg.back() == '\r')) {
-      msg.pop_back();
-    }
-
+    // while (!msg.empty() && (msg.back() == '\n' || msg.back() == '\r')) {
+    //   msg.pop_back();
+    // }
     if (msg == "QUIT") {
       close(clients_fds[i].fd);
       clients_fds.erase(clients_fds.begin() + i);
       --i; // compensate for the vector offset
       std::cout << "The player " << clients_fds[i].fd << " leave the game.\n";
-    } else if (msg == "SHUTDOWN") {
-      return (1);
     } else {
       std::cout << "|" << buffer << "|" << "\n";
     }

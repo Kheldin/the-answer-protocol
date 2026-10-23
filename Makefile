@@ -8,7 +8,7 @@ GUIFLAGS		= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 
 OBJ_DIR     = obj
 
-SERVER_SRCS = src/server/server.cpp
+SERVER_SRCS = src/network/server.cpp
 CLI_SRCS    = src/cli_client.cpp
 GUI_SRCS		= src/client_gui.cpp
 

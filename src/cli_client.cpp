@@ -13,7 +13,7 @@ int main(void) {
   serverAdress.sin_family = AF_INET;
   serverAdress.sin_addr.s_addr = INADDR_ANY;
   connect(clientSocket, (struct sockaddr *)&serverAdress, sizeof(serverAdress));
-  const char *message = "SHUTDOWN";
+  const char *message = "QUIT";
   send(clientSocket, message, strlen(message), 0);
   close(clientSocket);
   return 0;
