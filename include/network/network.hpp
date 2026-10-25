@@ -19,8 +19,8 @@ public:
   int sockfd{-1};
 
 private:
-  void accept_new_client(int &clientSocket);
-  int receive_msg(int i, int &clientSocket);
+  void accept_new_client();
+  int receive_msg(int i);
 };
 
 class Client {

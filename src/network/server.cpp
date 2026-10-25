@@ -1,4 +1,6 @@
 #include "network/network.hpp"
+#include <cerrno>
+#include <cstring>
 #include <iostream>
 #include <netinet/in.h>
 #include <poll.h>
@@ -45,11 +47,11 @@ Server::~Server() { close(sockfd); }
 
 void Server::start_listening() { listen(sockfd, 5); }
 
-void Server::accept_new_client(int &clientSocket) {
+void Server::accept_new_client() {
   // Create a socket and a pollfd for the new client.
   // Ask the kernel to check POLLIN event.
   // Add it to the list so it will be watched at the next poll.
-  clientSocket = accept(getfd(), nullptr, nullptr);
+  int clientSocket{accept(getfd(), nullptr, nullptr)};
   std::cout << "New connection request." << "\n";
   pollfd client{};
   client.fd = clientSocket;
@@ -58,29 +60,24 @@ void Server::accept_new_client(int &clientSocket) {
   clients_fds.push_back(client);
 }
 
-int Server::receive_msg(int i, int &clientSocket) {
+int Server::receive_msg(int i) {
   int check{0};
   char buffer[1024]{0};
-  check = recv(clientSocket, buffer, sizeof(buffer), 0);
-  // looking for errors or deconnections
-  if (check <= 0) {
-    close(clients_fds[i].fd);
-    clients_fds.erase(clients_fds.begin() + i);
-    --i; // compensate for the vector offset
+  check = recv(clients_fds[i].fd, buffer, sizeof(buffer), 0);
+  if (check == 0) {
+    return (i);
+  }
+  if (check < 0) {
+    std::cerr << "Error on recv, check =  " << check
+              << " msg: " << std::strerror(errno) << "\n";
     std::cout << "The player " << clients_fds[i].fd
               << " is deconnected or crash.\n";
-    return (1);
+    return (i);
   } else {
     std::string msg(buffer);
-    // rm the last char while is not a normal char
-    // while (!msg.empty() && (msg.back() == '\n' || msg.back() == '\r')) {
-    //   msg.pop_back();
-    // }
     if (msg == "QUIT") {
-      close(clients_fds[i].fd);
-      clients_fds.erase(clients_fds.begin() + i);
-      --i; // compensate for the vector offset
       std::cout << "The player " << clients_fds[i].fd << " leave the game.\n";
+      return (i);
     } else {
       std::cout << "|" << buffer << "|" << "\n";
     }
@@ -90,7 +87,6 @@ int Server::receive_msg(int i, int &clientSocket) {
 
 void Server::run() {
   bool run{true};
-  int clientSocket{0};
   while (run) {
     // std::vector::data() return a pointer to the first elem of the
     // container. poll() is a system call. The kernel will fill the
@@ -111,10 +107,12 @@ void Server::run() {
         // If the server socket is readable, it means that a client wants to
         // connect to the server.
         if (i == 0) {
-          accept_new_client(clientSocket);
+          accept_new_client();
         } else {
-          if (receive_msg(i, clientSocket) == 1) {
-            break;
+          if (receive_msg(i) > 0) {
+            close(clients_fds[i].fd);
+            clients_fds.erase(clients_fds.begin() + i);
+            i--;
           }
         }
       }
