@@ -10,7 +10,8 @@ OBJ_DIR     = obj
 
 SERVER_SRCS = src/server.cpp
 CLI_SRCS    = src/cli_client.cpp
-GUI_SRCS		= src/gui/client_gui.cpp src/gui/asset_manager.cpp src/gui/room.cpp
+GUI_SRCS	= src/gui/client_gui.cpp src/gui/asset_manager.cpp \
+			  src/gui/room.cpp src/gui/button.cpp
 
 
 SERVER_OBJS = $(SERVER_SRCS:%.cpp=$(OBJ_DIR)/%.o)
@@ -33,7 +34,7 @@ $(OBJ_DIR)/%.o: %.cpp Makefile
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-run-server: $(SERVER_NAME)
+run-server: $(SERVER_NAME)	
 	./$(SERVER_NAME)
 
 run-cli: $(CLI_NAME)

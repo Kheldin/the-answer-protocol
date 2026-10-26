@@ -17,6 +17,7 @@ void AssetManager::LoadAll()
     lockerroom_textures["background"] = LoadTexture("src/gui/assets/background/lockerroom.png");
     muscu_textures["background"] = LoadTexture("src/gui/assets/background/muscu.png");
     cardio_textures["background"] = LoadTexture("src/gui/assets/background/cardio.png");
+    shop_texture = LoadTexture("src/gui/assets/shop.png");
 
     buttonsTexture = LoadTexture("src/gui/assets/interactions/touch.png");
     
