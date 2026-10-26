@@ -60,29 +60,30 @@ void Server::accept_new_client() {
   clients_fds.push_back(client);
 }
 
-int Server::receive_msg(int i) {
+bool Server::receive_msg(size_t i) {
   int check{0};
   char buffer[1024]{0};
+  bool is_client_alive{true};
+
   check = recv(clients_fds[i].fd, buffer, sizeof(buffer), 0);
   if (check == 0) {
-    return (i);
-  }
-  if (check < 0) {
-    std::cerr << "Error on recv, check =  " << check
-              << " msg: " << std::strerror(errno) << "\n";
-    std::cout << "The player " << clients_fds[i].fd
-              << " is deconnected or crash.\n";
-    return (i);
+    std::cout << "Client " << clients_fds[i].fd << " disconnected properly."
+              << "\n";
+    is_client_alive = false;
+  } else if (check < 0) {
+    std::cout << "Client: " << clients_fds[i].fd
+              << " Error on recv: " << std::strerror(errno) << "\n";
+    is_client_alive = false;
   } else {
     std::string msg(buffer);
     if (msg == "QUIT") {
       std::cout << "The player " << clients_fds[i].fd << " leave the game.\n";
-      return (i);
+      is_client_alive = false;
     } else {
       std::cout << "|" << buffer << "|" << "\n";
     }
-    return (0);
   }
+  return (is_client_alive);
 }
 
 void Server::run() {
@@ -109,7 +110,7 @@ void Server::run() {
         if (i == 0) {
           accept_new_client();
         } else {
-          if (receive_msg(i) > 0) {
+          if (!receive_msg(i)) {
             close(clients_fds[i].fd);
             clients_fds.erase(clients_fds.begin() + i);
             i--;

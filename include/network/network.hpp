@@ -20,7 +20,7 @@ public:
 
 private:
   void accept_new_client();
-  int receive_msg(int i);
+  bool receive_msg(size_t i);
 };
 
 class Client {
