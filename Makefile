@@ -1,16 +1,16 @@
-SERVER_NAME = server
-CLI_NAME    = cli
-GUI_NAME		= gui
+SERVER_NAME = server.out
+CLI_NAME    = cli.out
+GUI_NAME		= gui.out
 
 CXX         = clang++
-CXXFLAGS    = -Wall -Wextra -Werror -std=c++23 -MMD -MP
+CXXFLAGS    = -Wall -Wextra -Werror -std=c++23 -MMD -MP -Iinclude
 GUIFLAGS		= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 
 
 OBJ_DIR     = obj
 
 SERVER_SRCS = src/server.cpp
 CLI_SRCS    = src/cli_client.cpp
-GUI_SRCS		= src/client_gui.cpp
+GUI_SRCS		= src/gui/client_gui.cpp src/gui/asset_manager.cpp src/gui/room.cpp
 
 
 SERVER_OBJS = $(SERVER_SRCS:%.cpp=$(OBJ_DIR)/%.o)
