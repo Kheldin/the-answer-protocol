@@ -3,7 +3,7 @@ CLI_NAME    = cli.out
 GUI_NAME		= gui.out
 
 CXX         = clang++
-CXXFLAGS    = -Wall -Wextra -Werror -std=c++23 -MMD -MP -Iinclude
+CXXFLAGS    = -Wall -Wextra -Werror -fsanitize=address -g -std=c++23 -MMD -MP -Iinclude
 GUIFLAGS		= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 
 
 OBJ_DIR     = obj

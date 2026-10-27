@@ -61,10 +61,11 @@ void Server::accept_new_client() {
 }
 
 bool Server::receive_msg(size_t i) {
-  int check{0};
+  ssize_t check{0};
   char buffer[1024]{0};
   bool is_client_alive{true};
 
+  // Check contains the number of bytes received.
   check = recv(clients_fds[i].fd, buffer, sizeof(buffer), 0);
   if (check == 0) {
     std::cout << "Client " << clients_fds[i].fd << " disconnected properly."
@@ -75,12 +76,13 @@ bool Server::receive_msg(size_t i) {
               << " Error on recv: " << std::strerror(errno) << "\n";
     is_client_alive = false;
   } else {
-    std::string msg(buffer);
-    if (msg == "QUIT") {
+    // Read only the number of bytes received
+    std::string command{buffer, (size_t)check};
+    if (command == "QUIT") {
       std::cout << "The player " << clients_fds[i].fd << " leave the game.\n";
       is_client_alive = false;
     } else {
-      std::cout << "|" << buffer << "|" << "\n";
+      std::cout << "|" << command << "|" << "\n";
     }
   }
   return (is_client_alive);

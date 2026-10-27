@@ -13,10 +13,7 @@ int main(void) {
   serverAdress.sin_family = AF_INET;
   serverAdress.sin_addr.s_addr = INADDR_ANY;
   connect(clientSocket, (struct sockaddr *)&serverAdress, sizeof(serverAdress));
-  const char *message = "Hello Server";
+  const char *message = "Hellobonjoiur";
   send(clientSocket, message, strlen(message), 0);
-  const char *message2 = "SUIIIIIII MPBAPPER";
-  send(clientSocket, message2, strlen(message2), 0);
-  // The msgs above are sent in one packet;
   close(clientSocket);
 }
