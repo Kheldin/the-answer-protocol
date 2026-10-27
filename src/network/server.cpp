@@ -10,33 +10,27 @@
 #include <vector>
 
 Server::Server() {
-  try {
-    // AF_INET: IPv4 protocol
-    // SOCK_STREAM: 2-way connection-based byte streams
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd == -1) {
-      throw std::runtime_error("socket() failed.");
-    }
-    sockaddr_in serverAdress{};
-    // sin_family: The address family for the transport address. This member
-    // should always be set to AF_INET.
-    serverAdress.sin_family = AF_INET;
-    // sin_port: A transport protocol port number.
-    // htons: Convert a uint16 host endian into the network endian.
-    serverAdress.sin_port = htons(8080);
-    // sin_addr: An IN_ADDR structure that contains an IPv4 transport address.
-    // INADDR_ANY: A wildcard.
-    serverAdress.sin_addr.s_addr = INADDR_ANY;
-    // Assign the adress to the socket.
-    if (bind(sockfd, (struct sockaddr *)&serverAdress, sizeof(serverAdress)) ==
-        -1) {
-      throw std::runtime_error("bind() failed.");
-    }
-  } catch (std::exception &e) {
-    std::cout << "An error occured during the socket initialization: "
-              << e.what() << "\n";
+  // AF_INET: IPv4 protocol
+  // SOCK_STREAM: 2-way connection-based byte streams
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd == -1) {
+    throw std::runtime_error("socket() failed.");
   }
-
+  sockaddr_in serverAdress{};
+  // sin_family: The address family for the transport address. This member
+  // should always be set to AF_INET.
+  serverAdress.sin_family = AF_INET;
+  // sin_port: A transport protocol port number.
+  // htons: Convert a uint16 host endian into the network endian.
+  serverAdress.sin_port = htons(8080);
+  // sin_addr: An IN_ADDR structure that contains an IPv4 transport address.
+  // INADDR_ANY: A wildcard.
+  serverAdress.sin_addr.s_addr = INADDR_ANY;
+  // Assign the adress to the socket.
+  if (bind(sockfd, (struct sockaddr *)&serverAdress, sizeof(serverAdress)) ==
+      -1) {
+    throw std::runtime_error("bind() failed.");
+  }
   monitor.fd = sockfd;
   monitor.events = POLLIN;
   monitor.revents = 0;
@@ -52,6 +46,11 @@ void Server::accept_new_client() {
   // Ask the kernel to check POLLIN event.
   // Add it to the list so it will be watched at the next poll.
   int clientSocket{accept(getfd(), nullptr, nullptr)};
+  if (clientSocket == -1) {
+    std::cerr << "An error happended when accepting new client: "
+              << std::strerror(errno) << "\n";
+    return;
+  }
   std::cout << "New connection request." << "\n";
   pollfd client{};
   client.fd = clientSocket;
@@ -124,8 +123,14 @@ void Server::run() {
 }
 
 int main(void) {
-  Server server{};
-  server.start_listening();
-  server.run();
+  try {
+    Server server{};
+    server.start_listening();
+    server.run();
+  } catch (std::exception &e) {
+    std::cout << "An error occured: " << e.what() << "\n";
+    std::cout << "Reason: " << strerror(errno) << "\n";
+  }
+
   return 0;
 }
