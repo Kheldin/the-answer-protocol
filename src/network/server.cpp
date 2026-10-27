@@ -13,7 +13,9 @@ Server::Server() {
   // AF_INET: IPv4 protocol
   // SOCK_STREAM: 2-way connection-based byte streams
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd == -1) {
+  int opt{1};
+  if (sockfd == -1 ||
+      setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) != 0) {
     throw std::runtime_error("socket() failed.");
   }
   sockaddr_in serverAdress{};
