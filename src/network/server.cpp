@@ -12,6 +12,7 @@
 Server::Server() {
   // AF_INET: IPv4 protocol
   // SOCK_STREAM: 2-way connection-based byte streams
+  errno = 0;
   sockfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
   int opt{1};
   if (sockfd == -1 ||
@@ -40,9 +41,13 @@ Server::Server() {
   clients_fds.push_back(monitor);
 }
 
-Server::~Server() { close(sockfd); }
+Server::~Server() {
+  errno = 0;
+  close(sockfd);
+}
 
 void Server::start_listening() {
+  errno = 0;
   if (listen(sockfd, 5) == -1) {
     throw std::runtime_error("listen() failed.");
   }
@@ -52,6 +57,7 @@ void Server::accept_new_client() {
   // Create a socket and a pollfd for the new client.
   // Ask the kernel to check POLLIN event.
   // Add it to the list so it will be watched at the next poll.
+  errno = 0;
   int clientSocket{accept(getfd(), nullptr, nullptr)};
   if (clientSocket == -1) {
     std::cerr << "An error happended when accepting new client: "
@@ -72,12 +78,20 @@ bool Server::receive_msg(size_t i) {
   bool is_client_alive{true};
 
   // Check contains the number of bytes received.
+  errno = 0;
   check = recv(clients_fds[i].fd, buffer, sizeof(buffer), 0);
+  // std::cout << check << "\n";
   if (check == 0) {
     std::cout << "Client " << clients_fds[i].fd << " disconnected properly."
               << "\n";
     is_client_alive = false;
   } else if (check < 0) {
+    // We have to check these errors even if check event with poll() because of
+    // spurious wakeup
+    if (errno == EWOULDBLOCK || errno == EAGAIN) {
+      errno = 0;
+      return (is_client_alive);
+    }
     std::cout << "Client: " << clients_fds[i].fd
               << " Error on recv: " << std::strerror(errno) << "\n";
     is_client_alive = false;
@@ -104,14 +118,37 @@ void Server::run() {
     //  0 means the system calls timed out before any fds is ready.
     //  -1 = errors and errno is set to indicate the error.
     // nb: Explain in readMe the choice of poll instead of epoll.
+    errno = 0;
     if (poll(clients_fds.data(), clients_fds.size(), -1) < 0) {
-      std::cerr << "Error on poll()\n";
-      break;
+      if (errno == EINTR) {
+        std::cout << "A signal occurred before any requested event" << "\n";
+      } else {
+        std::cerr << "Error on poll(): " << "\n";
+        std::cerr << strerror(errno) << "\n";
+        break;
+      }
     }
 
     // We go through the list to see which fd moved
     for (size_t i{0}; i < clients_fds.size(); ++i) {
-      if (clients_fds[i].revents & POLLIN) {
+      if (clients_fds[i].revents & POLLERR) {
+        close(clients_fds[i].fd);
+        clients_fds.erase(clients_fds.begin() + i);
+        i--;
+        std::cerr << "Error on fd " << clients_fds[i].fd << "\n";
+        std::cerr << strerror(errno) << "\n";
+        run = false;
+        break;
+      } else if (clients_fds[i].revents & POLLNVAL) {
+        std::cerr << "Fd " << i << " not open." << "\n";
+        std::cerr << strerror(errno) << "\n";
+      } else if (clients_fds[i].revents & POLLHUP) {
+        std::cout << "Connection terminated for fd " << clients_fds[i].fd
+                  << "\n";
+        close(clients_fds[i].fd);
+        clients_fds.erase(clients_fds.begin() + i);
+        i--;
+      } else if (clients_fds[i].revents & POLLIN) {
         // The index 0 is the server socket.
         // If the server socket is readable, it means that a client wants to
         // connect to the server.
