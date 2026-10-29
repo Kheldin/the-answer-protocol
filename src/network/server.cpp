@@ -12,7 +12,7 @@
 Server::Server() {
   // AF_INET: IPv4 protocol
   // SOCK_STREAM: 2-way connection-based byte streams
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  sockfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
   int opt{1};
   if (sockfd == -1 ||
       setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) != 0) {
@@ -33,6 +33,7 @@ Server::Server() {
       -1) {
     throw std::runtime_error("bind() failed.");
   }
+  pollfd monitor{};
   monitor.fd = sockfd;
   monitor.events = POLLIN;
   monitor.revents = 0;

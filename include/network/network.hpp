@@ -14,7 +14,6 @@ public:
   void run();
   void handle_events(); // Not implemented yet: basically a switch case for each
                         // Poll event constant.
-  pollfd monitor{};
   std::vector<pollfd> clients_fds{};
   int sockfd{-1};
 
