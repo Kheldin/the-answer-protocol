@@ -18,18 +18,18 @@ Server::Server() {
       setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) != 0) {
     throw std::runtime_error("socket() failed.");
   }
-  sockaddr_in serverAdress{};
+  sockaddr_in serverAddress{};
   // sin_family: The address family for the transport address. This member
   // should always be set to AF_INET.
-  serverAdress.sin_family = AF_INET;
+  serverAddress.sin_family = AF_INET;
   // sin_port: A transport protocol port number.
   // htons: Convert a uint16 host endian into the network endian.
-  serverAdress.sin_port = htons(8080);
+  serverAddress.sin_port = htons(8080);
   // sin_addr: An IN_ADDR structure that contains an IPv4 transport address.
   // INADDR_ANY: A wildcard.
-  serverAdress.sin_addr.s_addr = INADDR_ANY;
-  // Assign the adress to the socket.
-  if (bind(sockfd, (struct sockaddr *)&serverAdress, sizeof(serverAdress)) ==
+  serverAddress.sin_addr.s_addr = INADDR_ANY;
+  // Assign the Address to the socket.
+  if (bind(sockfd, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) ==
       -1) {
     throw std::runtime_error("bind() failed.");
   }
@@ -41,7 +41,11 @@ Server::Server() {
 
 Server::~Server() { close(sockfd); }
 
-void Server::start_listening() { listen(sockfd, 5); }
+void Server::start_listening() {
+  if (listen(sockfd, 5) == -1) {
+    throw std::runtime_error("listen() failed.");
+  }
+}
 
 void Server::accept_new_client() {
   // Create a socket and a pollfd for the new client.
@@ -130,7 +134,7 @@ int main(void) {
     server.start_listening();
     server.run();
   } catch (std::exception &e) {
-    std::cout << "An error occured: " << e.what() << "\n";
+    std::cout << "An error occurred: " << e.what() << "\n";
     std::cout << "Reason: " << strerror(errno) << "\n";
   }
 
