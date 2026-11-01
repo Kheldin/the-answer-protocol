@@ -1,5 +1,4 @@
 #pragma once
-#include <atomic>
 #include <netinet/in.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -15,7 +14,6 @@ public:
   void run();
   std::vector<pollfd> clients_fds{};
   int sockfd{-1};
-  std::atomic<bool> is_running{false};
 
 private:
   void accept_new_client();

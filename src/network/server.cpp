@@ -1,14 +1,14 @@
 #include "network/network.hpp"
+#include <atomic>
 #include <cerrno>
 #include <csignal>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <netinet/in.h>
 #include <poll.h>
-#include <stdexcept>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <vector>
 
 std::atomic<bool> is_running{false};
 
@@ -49,7 +49,6 @@ Server::~Server() {
   for (pollfd sock : clients_fds) {
     close(sock.fd);
   }
-  std::cout << close(sockfd) << "\n";
 }
 
 void Server::start_listening() {
@@ -172,13 +171,21 @@ void Server::run() {
     }
   }
 }
-void signalHandle(int sig) {}
+void handle_sigint(int) {
+  is_running = false;
+  const char *msg = "\nCTRL+C CAPTURED: Stopping the server cleanly.\n";
+  write(STDOUT_FILENO, msg, strlen(msg));
+}
 int main(void) {
   struct sigaction sa;
   memset(&sa, 0, sizeof(sa));
-  sa.sa_handler = got_signal;
+  sa.sa_handler = &handle_sigint;
   sigfillset(&sa.sa_mask);
-  sigac try {
+  if (sigaction(SIGINT, &sa, nullptr) == -1) {
+    std::cerr << "sigaction error" << "\n";
+    return (EXIT_FAILURE);
+  }
+  try {
     Server server{};
     server.start_listening();
     server.run();
@@ -186,5 +193,5 @@ int main(void) {
     std::cout << "An error occurred: " << e.what() << "\n";
     std::cout << "Reason: " << strerror(errno) << "\n";
   }
-  return 0;
+  return (EXIT_SUCCESS);
 }
