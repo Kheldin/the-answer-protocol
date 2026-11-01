@@ -1,5 +1,6 @@
 #include "network/network.hpp"
 #include <cerrno>
+#include <csignal>
 #include <cstring>
 #include <iostream>
 #include <netinet/in.h>
@@ -8,6 +9,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
+
+std::atomic<bool> is_running{false};
 
 Server::Server() {
   // AF_INET: IPv4 protocol
@@ -43,7 +46,10 @@ Server::Server() {
 
 Server::~Server() {
   errno = 0;
-  close(sockfd);
+  for (pollfd sock : clients_fds) {
+    close(sock.fd);
+  }
+  std::cout << close(sockfd) << "\n";
 }
 
 void Server::start_listening() {
@@ -51,6 +57,8 @@ void Server::start_listening() {
   if (listen(sockfd, 5) == -1) {
     throw std::runtime_error("listen() failed.");
   }
+  std::cout << "Server is listening." << "\n";
+  is_running = true;
 }
 
 void Server::accept_new_client() {
@@ -70,6 +78,7 @@ void Server::accept_new_client() {
   client.events = POLLIN;
   client.revents = 0;
   clients_fds.push_back(client);
+  std::cout << "New client accepted." << "\n";
 }
 
 bool Server::receive_msg(size_t i) {
@@ -89,7 +98,6 @@ bool Server::receive_msg(size_t i) {
     // We have to check these errors even if check event with poll() because of
     // spurious wakeup
     if (errno == EWOULDBLOCK || errno == EAGAIN) {
-      errno = 0;
       return (is_client_alive);
     }
     std::cout << "Client: " << clients_fds[i].fd
@@ -109,8 +117,7 @@ bool Server::receive_msg(size_t i) {
 }
 
 void Server::run() {
-  bool run{true};
-  while (run) {
+  while (is_running) {
     // std::vector::data() return a pointer to the first elem of the
     // container. poll() is a system call. The kernel will fill the
     // pollfd.revents with what happended. poll() return:
@@ -137,7 +144,7 @@ void Server::run() {
         i--;
         std::cerr << "Error on fd " << clients_fds[i].fd << "\n";
         std::cerr << strerror(errno) << "\n";
-        run = false;
+        is_running = false;
         break;
       } else if (clients_fds[i].revents & POLLNVAL) {
         std::cerr << "Fd " << i << " not open." << "\n";
@@ -165,9 +172,13 @@ void Server::run() {
     }
   }
 }
-
+void signalHandle(int sig) {}
 int main(void) {
-  try {
+  struct sigaction sa;
+  memset(&sa, 0, sizeof(sa));
+  sa.sa_handler = got_signal;
+  sigfillset(&sa.sa_mask);
+  sigac try {
     Server server{};
     server.start_listening();
     server.run();
@@ -175,6 +186,5 @@ int main(void) {
     std::cout << "An error occurred: " << e.what() << "\n";
     std::cout << "Reason: " << strerror(errno) << "\n";
   }
-
   return 0;
 }

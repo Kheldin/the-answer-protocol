@@ -3,7 +3,7 @@ CLI_NAME    = cli.out
 GUI_NAME		= gui.out
 
 CXX         = clang++
-CXXFLAGS    = -Wall -Wextra -Werror -fsanitize=address -g -std=c++23 -MMD -MP -Iinclude
+CXXFLAGS    = -Wall -Wextra -Werror -g3 -std=c++23 -MMD -MP -Iinclude
 GUIFLAGS		= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 
 
 OBJ_DIR     = obj
@@ -34,7 +34,7 @@ $(OBJ_DIR)/%.o: %.cpp Makefile
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 run-server: $(SERVER_NAME)
-	./$(SERVER_NAME)
+	valgrind -s --leak-check=full --show-leak-kinds=all ./$(SERVER_NAME)
 
 run-cli: $(CLI_NAME)
 	./$(CLI_NAME)
