@@ -7,9 +7,9 @@
 #include <iostream>
 #include <netinet/in.h>
 #include <poll.h>
+#include <print>
 #include <sys/socket.h>
 #include <unistd.h>
-
 std::atomic<bool> is_running{false};
 
 Server::Server() {
@@ -56,7 +56,7 @@ void Server::start_listening() {
   if (listen(sockfd, 5) == -1) {
     throw std::runtime_error("listen() failed.");
   }
-  std::cout << "Server is listening." << "\n";
+  std::println("Server is listening.");
   is_running = true;
 }
 
@@ -71,13 +71,13 @@ void Server::accept_new_client() {
               << std::strerror(errno) << "\n";
     return;
   }
-  std::cout << "New connection request." << "\n";
+  std::println("New connection request.");
   pollfd client{};
   client.fd = clientSocket;
   client.events = POLLIN;
   client.revents = 0;
   clients_fds.push_back(client);
-  std::cout << "New client accepted." << "\n";
+  std::println("New client accepted.");
 }
 
 bool Server::receive_msg(size_t i) {
@@ -88,10 +88,9 @@ bool Server::receive_msg(size_t i) {
   // Check contains the number of bytes received.
   errno = 0;
   check = recv(clients_fds[i].fd, buffer, sizeof(buffer), 0);
-  // std::cout << check << "\n";
+  // std::print << check << "\n";
   if (check == 0) {
-    std::cout << "Client " << clients_fds[i].fd << " disconnected properly."
-              << "\n";
+    std::println("Client {} disconnected properly.", clients_fds[i].fd);
     is_client_alive = false;
   } else if (check < 0) {
     // We have to check these errors even if check event with poll() because of
@@ -99,17 +98,17 @@ bool Server::receive_msg(size_t i) {
     if (errno == EWOULDBLOCK || errno == EAGAIN) {
       return (is_client_alive);
     }
-    std::cout << "Client: " << clients_fds[i].fd
-              << " Error on recv: " << std::strerror(errno) << "\n";
+    std::println("Client: {}.", clients_fds[i].fd);
+    std::println("{}", std::strerror(errno));
     is_client_alive = false;
   } else {
     // Read only the number of bytes received
     std::string command{buffer, (size_t)check};
     if (command == "QUIT") {
-      std::cout << "The player " << clients_fds[i].fd << " leave the game.\n";
+      std::println("The player {} left the game.", clients_fds[i].fd);
       is_client_alive = false;
     } else {
-      std::cout << "|" << command << "|" << "\n";
+      std::println("|{} |", command);
     }
   }
   return (is_client_alive);
@@ -127,7 +126,7 @@ void Server::run() {
     errno = 0;
     if (poll(clients_fds.data(), clients_fds.size(), -1) < 0) {
       if (errno == EINTR) {
-        std::cout << "A signal occurred before any requested event" << "\n";
+        std::println("A signal occurred before any requested event");
       } else {
         std::cerr << "Error on poll(): " << "\n";
         std::cerr << strerror(errno) << "\n";
@@ -149,8 +148,7 @@ void Server::run() {
         std::cerr << "Fd " << i << " not open." << "\n";
         std::cerr << strerror(errno) << "\n";
       } else if (clients_fds[i].revents & POLLHUP) {
-        std::cout << "Connection terminated for fd " << clients_fds[i].fd
-                  << "\n";
+        std::println("Connection terminated for fd {}", clients_fds[i].fd);
         close(clients_fds[i].fd);
         clients_fds.erase(clients_fds.begin() + i);
         i--;
@@ -190,8 +188,8 @@ int main(void) {
     server.start_listening();
     server.run();
   } catch (std::exception &e) {
-    std::cout << "An error occurred: " << e.what() << "\n";
-    std::cout << "Reason: " << strerror(errno) << "\n";
+    std::println("An error occurred: {}", e.what());
+    std::println("Reason {}", strerror(errno));
   }
   return (EXIT_SUCCESS);
 }
