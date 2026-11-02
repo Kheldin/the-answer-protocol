@@ -47,7 +47,10 @@ Server::Server() {
 Server::~Server() {
   errno = 0;
   for (pollfd sock : clients_fds) {
-    close(sock.fd);
+    if (close(sock.fd) == -1) {
+      std::println("An error happended when closing fd {}.", sock.fd);
+      std::println("{}", strerror(errno));
+    }
   }
 }
 
@@ -108,7 +111,7 @@ bool Server::receive_msg(size_t i) {
       std::println("The player {} left the game.", clients_fds[i].fd);
       is_client_alive = false;
     } else {
-      std::println("|{} |", command);
+      std::println("|{}|", command);
     }
   }
   return (is_client_alive);
