@@ -30,7 +30,7 @@ void InteractiveButton::Draw(Texture2D texture, float bframeWidth, float bframeH
 }
 
 void InteractiveButton::DrawDialog(int screenWidth, int screenHeight) {
-    if (isTalking) {
+    if (isTalking && !dialogText.empty()) {
         DrawRectangle(50, screenHeight - 120, screenWidth - 100, 100, LIGHTGRAY);
         DrawRectangleLines(50, screenHeight - 120, screenWidth - 100, 100, BLACK);
         DrawText(dialogText.c_str(), 70, screenHeight - 100, 20, BLACK);

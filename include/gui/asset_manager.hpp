@@ -30,12 +30,18 @@ public:
 
     Texture2D getButtonsTextures() { return buttonsTexture; }
     Texture2D getShopTexture() { return shop_texture; }
+    Texture2D getFightTexture() { return fightTexture; }
+    Texture2D getLeftFightTexture() { return left_fightTexture; }
+    Texture2D getRightFightTexture() { return right_fightTexture; }
 
 private:
     std::unordered_map<std::string, Texture2D> player_textures {};
 
     Texture2D buttonsTexture {};
     Texture2D shop_texture {};
+    Texture2D fightTexture {};
+    Texture2D left_fightTexture {};
+    Texture2D right_fightTexture {};
 
     std::unordered_map<std::string, Texture2D> reception_textures {};
     std::unordered_map<std::string, Vector2> reception_tpositions {};
