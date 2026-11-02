@@ -3,12 +3,12 @@ CLI_NAME    = cli.out
 GUI_NAME		= gui.out
 
 CXX         = clang++
-CXXFLAGS    = -stdlib=libc++ -Wall -Wextra -Werror -g3 -std=c++23 -MMD -MP -Iinclude
+CXXFLAGS    = -stdlib=libc++ -fexperimental-library -Wall -Wextra -Werror -g3 -std=c++23 -MMD -MP -Iinclude
 GUIFLAGS		= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 
 
 OBJ_DIR     = obj
 
-SERVER_SRCS = src/network/server.cpp
+SERVER_SRCS = src/network/server.cpp src/utils/logger.cpp
 CLI_SRCS    = src/network/client.cpp
 GUI_SRCS		= src/client_gui.cpp
 

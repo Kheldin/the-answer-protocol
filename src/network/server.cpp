@@ -10,8 +10,8 @@
 #include <print>
 #include <sys/socket.h>
 #include <unistd.h>
-std::atomic<bool> is_running{false};
 
+std::atomic<bool> is_running{false};
 Server::Server() {
   // AF_INET: IPv4 protocol
   // SOCK_STREAM: 2-way connection-based byte streams

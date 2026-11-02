@@ -1,6 +1,8 @@
 # Prerequisites
 *.d
 
+logfile
+
 # Executables
 gui.out
 server.out
