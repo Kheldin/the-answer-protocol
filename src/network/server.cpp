@@ -1,4 +1,5 @@
 #include "network/network.hpp"
+#include "utils/logger.hpp"
 #include <atomic>
 #include <cerrno>
 #include <csignal>
@@ -59,7 +60,7 @@ void Server::start_listening() {
   if (listen(sockfd, 5) == -1) {
     throw std::runtime_error("listen() failed.");
   }
-  std::println("Server is listening.");
+  logger.log(LogLevel::Info, "Server is listening.");
   is_running = true;
 }
 
@@ -74,13 +75,13 @@ void Server::accept_new_client() {
               << std::strerror(errno) << "\n";
     return;
   }
-  std::println("New connection request.");
+  logger.log(LogLevel::Info, "New connection request.");
   pollfd client{};
   client.fd = clientSocket;
   client.events = POLLIN;
   client.revents = 0;
   clients_fds.push_back(client);
-  std::println("New client accepted.");
+  logger.log(LogLevel::Info, "New client accepted.");
 }
 
 bool Server::receive_msg(size_t i) {
@@ -93,7 +94,8 @@ bool Server::receive_msg(size_t i) {
   check = recv(clients_fds[i].fd, buffer, sizeof(buffer), 0);
   // std::print << check << "\n";
   if (check == 0) {
-    std::println("Client {} disconnected properly.", clients_fds[i].fd);
+    logger.log(LogLevel::Info, "Client {} disconnected properly.",
+               clients_fds[i].fd);
     is_client_alive = false;
   } else if (check < 0) {
     // We have to check these errors even if check event with poll() because of
@@ -101,17 +103,18 @@ bool Server::receive_msg(size_t i) {
     if (errno == EWOULDBLOCK || errno == EAGAIN) {
       return (is_client_alive);
     }
-    std::println("Client: {}.", clients_fds[i].fd);
-    std::println("{}", std::strerror(errno));
+    logger.log(LogLevel::Error, "Client: {}.", clients_fds[i].fd);
+    logger.log(LogLevel::Error, "{}", std::strerror(errno));
     is_client_alive = false;
   } else {
     // Read only the number of bytes received
     std::string command{buffer, (size_t)check};
     if (command == "QUIT") {
-      std::println("The player {} left the game.", clients_fds[i].fd);
+      logger.log(LogLevel::Info, "The player {} left the game.",
+                 clients_fds[i].fd);
       is_client_alive = false;
     } else {
-      std::println("|{}|", command);
+      logger.log(LogLevel::Info, "|{}|", command);
     }
   }
   return (is_client_alive);
@@ -129,7 +132,8 @@ void Server::run() {
     errno = 0;
     if (poll(clients_fds.data(), clients_fds.size(), -1) < 0) {
       if (errno == EINTR) {
-        std::println("A signal occurred before any requested event");
+        logger.log(LogLevel::Warning,
+                   "A signal occurred before any requested event");
       } else {
         std::cerr << "Error on poll(): " << "\n";
         std::cerr << strerror(errno) << "\n";
@@ -151,7 +155,8 @@ void Server::run() {
         std::cerr << "Fd " << i << " not open." << "\n";
         std::cerr << strerror(errno) << "\n";
       } else if (clients_fds[i].revents & POLLHUP) {
-        std::println("Connection terminated for fd {}", clients_fds[i].fd);
+        logger.log(LogLevel::Info, "Connection terminated for fd {}",
+                   clients_fds[i].fd);
         close(clients_fds[i].fd);
         clients_fds.erase(clients_fds.begin() + i);
         i--;
@@ -178,6 +183,7 @@ void handle_sigint(int) {
   write(STDOUT_FILENO, msg, strlen(msg));
 }
 int main(void) {
+  // Handle CTRL+C
   struct sigaction sa;
   memset(&sa, 0, sizeof(sa));
   sa.sa_handler = &handle_sigint;

@@ -2,8 +2,9 @@ SERVER_NAME = server.out
 CLI_NAME    = cli.out
 GUI_NAME		= gui.out
 
-CXX         = clang++
-CXXFLAGS    = -stdlib=libc++ -fexperimental-library -Wall -Wextra -Werror -g3 -std=c++23 -MMD -MP -Iinclude
+CXX         = clang++ 
+# -fexperimental-library 
+CXXFLAGS    = -stdlib=libc++ -Wall -Wextra -Werror -g3 -std=c++23 -MMD -MP -Iinclude
 GUIFLAGS		= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 
 
 OBJ_DIR     = obj
