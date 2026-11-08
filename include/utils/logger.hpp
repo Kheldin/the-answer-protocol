@@ -4,6 +4,7 @@
 #include <format>
 #include <fstream>
 #include <string_view>
+#include <utility>
 enum class LogLevel { Debug, Info, Warning, Error, Critical };
 
 class Logger {

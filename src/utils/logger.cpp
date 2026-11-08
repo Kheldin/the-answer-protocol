@@ -1,9 +1,38 @@
 #include "utils/logger.hpp"
+#include <array>
 #include <ctime>
-#include <fstream>
+#include <format>
 #include <print>
-#include <sstream>
+#include <string_view>
+#include <unistd.h>
 
+namespace {
+
+constexpr std::string_view kReset = "\033[0m";
+constexpr std::string_view kPurple = "\033[38;2;189;147;249m"; // #BD93F9
+constexpr std::string_view kDim = "\033[38;2;98;114;164m";     // #6272A4
+constexpr std::string_view levelToColor(LogLevel level) noexcept {
+  switch (level) {
+  case LogLevel::Debug:
+    return "\033[90m"; // gris
+  case LogLevel::Info:
+    return "\033[32m"; // vert
+  case LogLevel::Warning:
+    return "\033[33m"; // jaune
+  case LogLevel::Error:
+    return "\033[31m"; // rouge
+  case LogLevel::Critical:
+    return "\033[1;97;41m"; // gras, blanc sur fond rouge
+  }
+  return "";
+}
+
+bool colorEnabled() {
+  static const bool enabled = ::isatty(STDOUT_FILENO) != 0;
+  return enabled;
+}
+
+} // namespace
 namespace {
 
 constexpr std::string_view levelToString(LogLevel level) noexcept {
@@ -48,11 +77,19 @@ Logger::Logger(const std::filesystem::path &filename)
 
 void Logger::log(LogLevel level, std::string_view message) {
 
-  const std::string entry = std::format("[{}] {}: {}\n", currentTimestamp(),
-                                        levelToString(level), message);
+  const std::string timestamp = currentTimestamp();
+  const std::string_view name = levelToString(level);
 
-  std::print("{}", entry);
+  const std::string plain =
+      std::format("[{}] {}: {}\n", timestamp, name, message);
 
-  m_logFile << entry;
+  if (colorEnabled()) {
+    std::print("[{}{}] {}{}{} {}{}\n", kDim, timestamp, levelToColor(level),
+               name, kPurple, message, kReset);
+  } else {
+    std::print("{}", plain);
+  }
+
+  m_logFile << plain;
   m_logFile.flush();
 }

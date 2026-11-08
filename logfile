@@ -4,3 +4,39 @@
 [2026-11-07 16:13:11] INFO: Server is listening.
 [2026-11-07 17:49:06] INFO: Server is listening.
 [2026-11-07 17:49:07] WARNING: A signal occurred before any requested event
+[2026-11-08 10:26:27] INFO: Server is listening.
+[2026-11-08 10:26:28] WARNING: A signal occurred before any requested event
+[2026-11-08 10:34:42] INFO: Server is listening.
+[2026-11-08 10:34:45] WARNING: A signal occurred before any requested event
+[2026-11-08 10:35:08] INFO: Server is listening.
+[2026-11-08 10:35:09] WARNING: A signal occurred before any requested event
+[2026-11-08 10:53:47] INFO: Server is listening.
+[2026-11-08 10:53:50] WARNING: A signal occurred before any requested event
+[2026-11-08 10:58:31] INFO: Server is listening.
+[2026-11-08 10:58:32] WARNING: A signal occurred before any requested event
+[2026-11-08 10:59:15] INFO: Server is listening.
+[2026-11-08 10:59:18] WARNING: A signal occurred before any requested event
+[2026-11-08 11:05:25] INFO: Server is listening.
+[2026-11-08 11:05:28] WARNING: A signal occurred before any requested event
+[2026-11-08 11:07:36] INFO: Server is listening.
+[2026-11-08 11:08:07] WARNING: A signal occurred before any requested event
+[2026-11-08 11:09:49] INFO: Server is listening.
+[2026-11-08 11:09:54] WARNING: A signal occurred before any requested event
+[2026-11-08 11:10:02] INFO: Server is listening.
+[2026-11-08 11:10:06] WARNING: A signal occurred before any requested event
+[2026-11-08 11:10:09] INFO: Server is listening.
+[2026-11-08 11:10:11] WARNING: A signal occurred before any requested event
+[2026-11-08 11:10:23] INFO: Server is listening.
+[2026-11-08 11:10:44] INFO: New connection request.
+[2026-11-08 11:10:44] INFO: New client accepted.
+[2026-11-08 11:10:44] INFO: |Hellobonjoiur|
+[2026-11-08 11:10:44] INFO: Client 5 disconnected properly.
+[2026-11-08 11:11:11] WARNING: A signal occurred before any requested event
+[2026-11-08 11:24:19] INFO: Server is listening.
+[2026-11-08 11:24:25] INFO: New connection request.
+[2026-11-08 11:24:25] INFO: New client accepted.78
+[2026-11-08 11:24:25] INFO: |Hellobonjoiur|
+[2026-11-08 11:24:25] INFO: Client 5 disconnected properly.
+[2026-11-08 11:29:01] WARNING: A signal occurred before any requested event
+[2026-11-08 11:29:03] INFO: Server is listening.
+[2026-11-08 11:29:04] WARNING: A signal occurred before any requested event

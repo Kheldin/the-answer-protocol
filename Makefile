@@ -35,8 +35,8 @@ $(OBJ_DIR)/%.o: %.cpp Makefile
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 run-server: $(SERVER_NAME)
-	valgrind -s --leak-check=full --show-leak-kinds=all --track-fds=yes ./$(SERVER_NAME) 
-	# ./$(SERVER_NAME)
+	./$(SERVER_NAME)
+	# valgrind -s --leak-check=full --show-leak-kinds=all --track-fds=yes ./$(SERVER_NAME) 
 
 run-cli: $(CLI_NAME)
 	./$(CLI_NAME)
