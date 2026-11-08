@@ -76,11 +76,15 @@ void Server::accept_new_client() {
     return;
   }
   logger.log(LogLevel::Info, "New connection request.");
-  pollfd client{};
-  client.fd = clientSocket;
-  client.events = POLLIN;
-  client.revents = 0;
-  clients_fds.push_back(client);
+  pollfd pollstruct{};
+  pollstruct.fd = clientSocket;
+  pollstruct.events = POLLIN;
+  pollstruct.revents = 0;
+  Client client{Client(pollstruct)};
+  client.fd = client.pollstruct.fd;
+  clients_fds.push_back(pollstruct);
+  clients.push_back(client);
+  ::send(pollstruct.fd, "OK hello proto=1", 16, 0);
   logger.log(LogLevel::Info, "New client accepted.");
 }
 
@@ -91,8 +95,7 @@ bool Server::receive_msg(size_t i) {
 
   // Check contains the number of bytes received.
   errno = 0;
-  check = recv(clients_fds[i].fd, buffer, sizeof(buffer), 0);
-  // std::print << check << "\n";
+  check = ::recv(clients_fds[i].fd, buffer, sizeof(buffer), 0);
   if (check == 0) {
     logger.log(LogLevel::Info, "Client {} disconnected properly.",
                clients_fds[i].fd);
@@ -120,6 +123,15 @@ bool Server::receive_msg(size_t i) {
   return (is_client_alive);
 }
 
+bool process_msg(std::string msg) {
+  if (msg.contains("\n")) {
+    // Check if its a valid msg, process it, substract it from the vector till
+    // the delimiter (\n)
+    return (1);
+  }
+  return (0);
+}
+
 void Server::run() {
   while (is_running) {
     // std::vector::data() return a pointer to the first elem of the
@@ -130,7 +142,7 @@ void Server::run() {
     //  -1 = errors and errno is set to indicate the error.
     // nb: Explain in readMe the choice of poll instead of epoll.
     errno = 0;
-    if (poll(clients_fds.data(), clients_fds.size(), -1) < 0) {
+    if (::poll(clients_fds.data(), clients_fds.size(), -1) < 0) {
       if (errno == EINTR) {
         logger.log(LogLevel::Warning,
                    "A signal occurred before any requested event");
@@ -177,11 +189,13 @@ void Server::run() {
     }
   }
 }
+
 void handle_sigint(int) {
   is_running = false;
   const char *msg = "\nCTRL+C CAPTURED: Stopping the server cleanly.\n";
   write(STDOUT_FILENO, msg, strlen(msg));
 }
+
 int main(void) {
   // Handle CTRL+C
   struct sigaction sa;

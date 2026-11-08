@@ -14,15 +14,15 @@ constexpr std::string_view kDim = "\033[38;2;98;114;164m";     // #6272A4
 constexpr std::string_view levelToColor(LogLevel level) noexcept {
   switch (level) {
   case LogLevel::Debug:
-    return "\033[90m"; // gris
+    return "\033[90m"; // grey
   case LogLevel::Info:
-    return "\033[32m"; // vert
+    return "\033[32m"; // green
   case LogLevel::Warning:
-    return "\033[33m"; // jaune
+    return "\033[33m"; // yellow
   case LogLevel::Error:
-    return "\033[31m"; // rouge
+    return "\033[31m"; // red
   case LogLevel::Critical:
-    return "\033[1;97;41m"; // gras, blanc sur fond rouge
+    return "\033[1;97;41m"; // white on red background
   }
   return "";
 }
