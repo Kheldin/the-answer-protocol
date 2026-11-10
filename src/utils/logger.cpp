@@ -84,7 +84,7 @@ void Logger::log(LogLevel level, std::string_view message) {
       std::format("[{}] {}: {}\n", timestamp, name, message);
 
   if (colorEnabled()) {
-    std::print("[{}{}] {}{}{} {}{}\n", kDim, timestamp, levelToColor(level),
+    std::print("{}[{}] {}{}{} {}{}\n", kDim, timestamp, levelToColor(level),
                name, kPurple, message, kReset);
   } else {
     std::print("{}", plain);

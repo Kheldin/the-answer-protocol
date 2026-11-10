@@ -83,7 +83,6 @@ void Server::accept_new_client() {
   pollstruct.events = POLLIN;
   pollstruct.revents = 0;
   Client client{Client(pollstruct)};
-  client.fd = client.pollstruct.fd;
   clients_fds.push_back(pollstruct);
   clients.push_back(client);
   ::send(pollstruct.fd, "OK hello proto=1", 16, 0);

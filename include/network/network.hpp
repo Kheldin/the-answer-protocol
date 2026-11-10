@@ -12,7 +12,6 @@ class Client {
 public:
   Client(pollfd p) { pollstruct = p; }
   pollfd pollstruct{};
-  int fd{-1};
   std::string buffer{};
   uint8_t con_status{0};
 
