@@ -43,6 +43,8 @@ Server::Server() {
   monitor.events = POLLIN;
   monitor.revents = 0;
   clients_fds.push_back(monitor);
+  Client mon_client{monitor};
+  clients.push_back(mon_client);
 }
 
 Server::~Server() {
@@ -95,7 +97,7 @@ bool Server::receive_msg(size_t i) {
 
   // Check contains the number of bytes received.
   errno = 0;
-  check = ::recv(clients_fds[i].fd, buffer, sizeof(buffer), 0);
+  check = ::recv(clients.at(i).pollstruct.fd, buffer, sizeof(buffer), 0);
   if (check == 0) {
     logger.log(LogLevel::Info, "Client {} disconnected properly.",
                clients_fds[i].fd);
@@ -206,13 +208,8 @@ int main(void) {
     std::cerr << "sigaction error" << "\n";
     return (EXIT_FAILURE);
   }
-  try {
-    Server server{};
-    server.start_listening();
-    server.run();
-  } catch (std::exception &e) {
-    std::println("An error occurred: {}", e.what());
-    std::println("Reason {}", strerror(errno));
-  }
+  Server server{};
+  server.start_listening();
+  server.run();
   return (EXIT_SUCCESS);
 }
