@@ -2,9 +2,14 @@ SERVER_NAME = server.out
 CLI_NAME    = cli.out
 GUI_NAME		= gui.out
 
+<<<<<<< HEAD
 CXX         = clang++ 
 # -fexperimental-library 
 CXXFLAGS    = -stdlib=libc++ -Wall -Wextra -Werror -g3 -std=c++23 -MMD -MP -Iinclude
+=======
+CXX         = clang++
+CXXFLAGS    = -Wall -Wextra -Werror -std=c++23 -MMD -MP -Iinclude -pthread
+>>>>>>> cli
 GUIFLAGS		= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 
 
 OBJ_DIR     = obj
@@ -19,7 +24,7 @@ CLI_OBJS    = $(CLI_SRCS:%.cpp=$(OBJ_DIR)/%.o)
 GUI_OBJS    = $(GUI_SRCS:%.cpp=$(OBJ_DIR)/%.o)
 DEPS        = $(SERVER_OBJS:.o=.d) $(CLI_OBJS:.o=.d) $(GUI_OBJS:.o=.d)
 
-all: $(SERVER_NAME) $(CLI_NAME)
+all: $(SERVER_NAME) $(CLI_NAME) $(GUI_NAME)
 
 $(SERVER_NAME): $(SERVER_OBJS)
 	$(CXX) $(CXXFLAGS) $(SERVER_OBJS) -o $@
@@ -39,7 +44,7 @@ run-server: $(SERVER_NAME)
 	valgrind -s --leak-check=full --show-leak-kinds=all --track-fds=yes ./$(SERVER_NAME) 
 
 run-cli: $(CLI_NAME)
-	./$(CLI_NAME)
+	./$(CLI_NAME) 127.0.0.1 8080
 
 run-gui: $(GUI_NAME)
 	./$(GUI_NAME)
