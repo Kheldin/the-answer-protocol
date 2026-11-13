@@ -10,8 +10,8 @@
 
 class Client {
 public:
-  Client(pollfd p) { pollstruct = p; }
-  pollfd pollstruct{};
+  Client(int p_fd) { fd = p_fd; }
+  int fd{};
   std::string buffer{};
   uint8_t con_status{0};
 
@@ -25,7 +25,7 @@ public:
   int getfd() const { return sockfd; }
   void start_listening();
   void run();
-  std::vector<pollfd> clients_fds{};
+  std::vector<pollfd> clients_poll{};
   int sockfd{-1};
   Logger logger{"logfile"};
   std::vector<Client> clients{};

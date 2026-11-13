@@ -9,7 +9,9 @@
 #include <netinet/in.h>
 #include <poll.h>
 #include <print>
+#include <sys/poll.h>
 #include <sys/socket.h>
+#include <system_error>
 #include <unistd.h>
 
 std::atomic<bool> is_running{false};
@@ -42,14 +44,13 @@ Server::Server() {
   monitor.fd = sockfd;
   monitor.events = POLLIN;
   monitor.revents = 0;
-  clients_fds.push_back(monitor);
-  Client mon_client{monitor};
-  clients.push_back(mon_client);
+  clients_poll.emplace_back(monitor);
+  clients.emplace_back(monitor.fd);
 }
 
 Server::~Server() {
   errno = 0;
-  for (pollfd sock : clients_fds) {
+  for (pollfd sock : clients_poll) {
     if (close(sock.fd) == -1) {
       std::println("An error happended when closing fd {}.", sock.fd);
       std::println("{}", strerror(errno));
@@ -73,19 +74,21 @@ void Server::accept_new_client() {
   errno = 0;
   int clientSocket{accept(getfd(), nullptr, nullptr)};
   if (clientSocket == -1) {
-    std::cerr << "An error happended when accepting new client: "
-              << std::strerror(errno) << "\n";
+    const int err = errno;
+    logger.log(LogLevel::Critical,
+               "An error happened when accepting new client: {}",
+               std::generic_category().message(err));
     return;
   }
   logger.log(LogLevel::Info, "New connection request.");
   pollfd pollstruct{};
-  pollstruct.fd = clientSocket;
   pollstruct.events = POLLIN;
   pollstruct.revents = 0;
-  Client client{Client(pollstruct)};
-  clients_fds.push_back(pollstruct);
-  clients.push_back(client);
-  ::send(pollstruct.fd, "OK hello proto=1", 16, 0);
+  pollstruct.fd = clientSocket;
+  Client client{pollstruct.fd};
+  clients_poll.emplace_back(pollstruct);
+  clients.emplace_back(client);
+  ::send(client.fd, "OK hello proto=1", 16, 0);
   logger.log(LogLevel::Info, "New client accepted.");
 }
 
@@ -96,10 +99,10 @@ bool Server::receive_msg(size_t i) {
 
   // Check contains the number of bytes received.
   errno = 0;
-  check = ::recv(clients.at(i).pollstruct.fd, buffer, sizeof(buffer), 0);
+  check = ::recv(clients.at(i).fd, buffer, sizeof(buffer), 0);
   if (check == 0) {
     logger.log(LogLevel::Info, "Client {} disconnected properly.",
-               clients_fds[i].fd);
+               clients_poll[i].fd);
     is_client_alive = false;
   } else if (check < 0) {
     // We have to check these errors even if check event with poll() because of
@@ -107,7 +110,7 @@ bool Server::receive_msg(size_t i) {
     if (errno == EWOULDBLOCK || errno == EAGAIN) {
       return (is_client_alive);
     }
-    logger.log(LogLevel::Error, "Client: {}.", clients_fds[i].fd);
+    logger.log(LogLevel::Error, "Client: {}.", clients_poll[i].fd);
     logger.log(LogLevel::Error, "{}", std::strerror(errno));
     is_client_alive = false;
   } else {
@@ -115,7 +118,7 @@ bool Server::receive_msg(size_t i) {
     std::string command{buffer, (size_t)check};
     if (command == "QUIT") {
       logger.log(LogLevel::Info, "The player {} left the game.",
-                 clients_fds[i].fd);
+                 clients_poll[i].fd);
       is_client_alive = false;
     } else {
       logger.log(LogLevel::Info, "|{}|", command);
@@ -143,37 +146,34 @@ void Server::run() {
     //  -1 = errors and errno is set to indicate the error.
     // nb: Explain in readMe the choice of poll instead of epoll.
     errno = 0;
-    if (::poll(clients_fds.data(), clients_fds.size(), -1) < 0) {
+    if (::poll(clients_poll.data(), clients_poll.size(), -1) < 0) {
       if (errno == EINTR) {
         logger.log(LogLevel::Warning,
                    "A signal occurred before any requested event");
       } else {
-        std::cerr << "Error on poll(): " << "\n";
-        std::cerr << strerror(errno) << "\n";
-        break;
+        const int err = errno;
+        logger.log(LogLevel::Critical, "Error on poll(): {}",
+                   std::generic_category().message(err));
+        is_running = false;
       }
     }
 
     // We go through the list to see which fd moved
-    for (size_t i{0}; i < clients_fds.size(); ++i) {
-      if (clients_fds[i].revents & POLLERR) {
-        close(clients_fds[i].fd);
-        clients_fds.erase(clients_fds.begin() + i);
+    for (size_t i{0}; i < clients_poll.size(); ++i) {
+      const int err{errno};
+      if (clients_poll[i].revents & (POLLERR | POLLNVAL | POLLHUP)) {
+        if (clients_poll[i].revents & POLLHUP) {
+          logger.log(LogLevel::Info, "Connection terminated for fd {}",
+                     clients_poll[i].fd);
+        } else {
+          logger.log(LogLevel::Critical, "Error on fd {}: {}",
+                     clients_poll[i].fd, std::generic_category().message(err));
+        }
+        close(clients_poll[i].fd);
+        clients_poll.erase(clients_poll.begin() + i);
+        clients.erase(clients.begin() + i);
         i--;
-        std::cerr << "Error on fd " << clients_fds[i].fd << "\n";
-        std::cerr << strerror(errno) << "\n";
-        is_running = false;
-        break;
-      } else if (clients_fds[i].revents & POLLNVAL) {
-        std::cerr << "Fd " << i << " not open." << "\n";
-        std::cerr << strerror(errno) << "\n";
-      } else if (clients_fds[i].revents & POLLHUP) {
-        logger.log(LogLevel::Info, "Connection terminated for fd {}",
-                   clients_fds[i].fd);
-        close(clients_fds[i].fd);
-        clients_fds.erase(clients_fds.begin() + i);
-        i--;
-      } else if (clients_fds[i].revents & POLLIN) {
+      } else if (clients_poll[i].revents & POLLIN) {
         // The index 0 is the server socket.
         // If the server socket is readable, it means that a client wants to
         // connect to the server.
@@ -181,8 +181,9 @@ void Server::run() {
           accept_new_client();
         } else {
           if (!receive_msg(i)) {
-            close(clients_fds[i].fd);
-            clients_fds.erase(clients_fds.begin() + i);
+            close(clients_poll[i].fd);
+            clients_poll.erase(clients_poll.begin() + i);
+            clients.erase(clients.begin() + i);
             i--;
           }
         }
