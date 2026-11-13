@@ -3,7 +3,7 @@ CLI_NAME    = cli.out
 GUI_NAME		= gui.out
 
 CXX         = clang++
-CXXFLAGS    = -Wall -Wextra -Werror -std=c++23 -MMD -MP -Iinclude
+CXXFLAGS    = -Wall -Wextra -Werror -std=c++23 -MMD -MP -Iinclude -pthread
 GUIFLAGS		= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 
 
 OBJ_DIR     = obj
@@ -18,7 +18,7 @@ CLI_OBJS    = $(CLI_SRCS:%.cpp=$(OBJ_DIR)/%.o)
 GUI_OBJS    = $(GUI_SRCS:%.cpp=$(OBJ_DIR)/%.o)
 DEPS        = $(SERVER_OBJS:.o=.d) $(CLI_OBJS:.o=.d) $(GUI_OBJS:.o=.d)
 
-all: $(SERVER_NAME) $(CLI_NAME)
+all: $(SERVER_NAME) $(CLI_NAME) $(GUI_NAME)
 
 $(SERVER_NAME): $(SERVER_OBJS)
 	$(CXX) $(CXXFLAGS) $(SERVER_OBJS) -o $@
@@ -34,10 +34,10 @@ $(OBJ_DIR)/%.o: %.cpp Makefile
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 run-server: $(SERVER_NAME)
-	./$(SERVER_NAME)
+	./$(SERVER_NAME) 8080
 
 run-cli: $(CLI_NAME)
-	./$(CLI_NAME)
+	./$(CLI_NAME) 127.0.0.1 8080
 
 run-gui: $(GUI_NAME)
 	./$(GUI_NAME)
