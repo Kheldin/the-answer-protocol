@@ -1,9 +1,12 @@
 # Prerequisites
 *.d
 
+<<<<<<< HEAD
 # logfile
 
 # Executables
+=======
+>>>>>>> gui
 gui.out
 server.out
 cli.out
