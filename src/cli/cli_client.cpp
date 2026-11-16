@@ -1,4 +1,4 @@
-#include "cli.hpp"
+#include "cli/cli.hpp"
 #include <iostream>
 #include <sstream>
 #include <unistd.h>
@@ -186,6 +186,7 @@ int main(int argc, char** argv) {
     std::string ip = "127.0.0.1";
     int port = 8080;
 
+    // std::cout << "\n>\n ";
     if (argc == 3) {
         ip = argv[1];
         try {
