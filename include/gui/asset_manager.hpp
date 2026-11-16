@@ -38,6 +38,10 @@ public:
     Texture2D getCreatineTexture() { return creatineTexture; }
     Texture2D getTestoTexture() { return testoTexture; }
     Texture2D getSupplementsTexture() { return supplementsTexture; }
+    
+    Texture2D getbenchPositionsTexture() { return benchPositionsTexture; }
+    Texture2D getsquatsPositionsTexture() { return squatsPositionsTexture; }
+    Texture2D getsprintPositionsTexture() { return sprintPositionsTexture; }
 
 private:
     std::unordered_map<std::string, Texture2D> player_textures {};
@@ -47,6 +51,10 @@ private:
     Texture2D fightTexture {};
     Texture2D left_fightTexture {};
     Texture2D right_fightTexture {};
+    
+    Texture2D benchPositionsTexture {};
+    Texture2D squatsPositionsTexture {};
+    Texture2D sprintPositionsTexture {};
     
     Texture2D wheyTexture {};
     Texture2D testoTexture {};

@@ -19,9 +19,13 @@ void AssetManager::LoadAll()
     cardio_textures["background"] = LoadTexture("src/gui/assets/background/cardio.png");
 
     shop_texture = LoadTexture("src/gui/assets/shop.png");
-    fightTexture = LoadTexture("src/gui/assets/fight_background.png");
+    fightTexture = LoadTexture("src/gui/assets/background/fight_background.png");
     left_fightTexture = LoadTexture("src/gui/assets/left_fight.png");
     right_fightTexture = LoadTexture("src/gui/assets/right_fight.png");
+
+    benchPositionsTexture = LoadTexture("src/gui/assets/exercices/bench_positions.png");
+    sprintPositionsTexture = LoadTexture("src/gui/assets/exercices/sprint_positions.png");
+    squatsPositionsTexture = LoadTexture("src/gui/assets/exercices/squats_positions.png");
 
 
     buttonsTexture = LoadTexture("src/gui/assets/interactions/touch.png");
