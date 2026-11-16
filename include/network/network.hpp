@@ -7,13 +7,23 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <vector>
+#define BUFFER_SIZE 1023
 
 class Client {
 public:
-  Client(int p_fd) { fd = p_fd; }
+  Client(int p_fd) {
+    fd = p_fd;
+    buffer.reserve(
+        BUFFER_SIZE); // 1023 "effective" bytes to keep the 1024th for the \0
+  }
+  Client(const Client &) = delete;
+  Client &operator=(const Client &) = delete;
+  Client(Client &&) noexcept = default;
+  Client &operator=(Client &&) noexcept = default;
   int fd{};
-  std::string buffer{};
+  std::string buffer{}; // This buffer should not exceed 1024 bytes
   uint8_t con_status{0};
+  bool alive{true};
 
 private:
 };
@@ -33,5 +43,5 @@ public:
 private:
   void accept_new_client();
   bool receive_msg(size_t i);
-  bool process_msg(Client client);
+  bool process_msg(Client &client);
 };

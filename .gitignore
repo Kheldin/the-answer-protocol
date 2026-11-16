@@ -1,7 +1,9 @@
 # Prerequisites
 *.d
 
+
 # logfile
+logfile
 
 # Executables
 gui.out

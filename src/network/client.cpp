@@ -13,10 +13,10 @@ int main(void) {
   serverAdress.sin_family = AF_INET;
   serverAdress.sin_addr.s_addr = INADDR_ANY;
   connect(clientSocket, (struct sockaddr *)&serverAdress, sizeof(serverAdress));
-  const char *message = "Hellobonjoiur";
+  const char *message = "QUIT\n";
   send(clientSocket, message, strlen(message), 0);
   ssize_t check = ::recv(clientSocket, buffer, sizeof(buffer), 0);
   std::string command{buffer, (size_t)check};
-  std::println("|{}|", command);
+  std::println("response: {}", command);
   close(clientSocket);
 }

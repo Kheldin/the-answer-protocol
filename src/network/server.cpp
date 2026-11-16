@@ -9,6 +9,8 @@
 #include <netinet/in.h>
 #include <poll.h>
 #include <print>
+#include <string>
+#include <string_view>
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <system_error>
@@ -85,55 +87,58 @@ void Server::accept_new_client() {
   pollstruct.events = POLLIN;
   pollstruct.revents = 0;
   pollstruct.fd = clientSocket;
-  Client client{pollstruct.fd};
+  clients.emplace_back(clientSocket);
   clients_poll.emplace_back(pollstruct);
-  clients.emplace_back(client);
-  ::send(client.fd, "OK hello proto=1", 16, 0);
+
+  static constexpr std::string_view greeting = "OK hello proto=1\n";
+  ::send(clientSocket, greeting.data(), greeting.size(), 0);
   logger.log(LogLevel::Info, "New client accepted.");
 }
 
+bool Server::process_msg(Client &client) {
+  if (client.buffer.contains("\n")) {
+    logger.log(LogLevel::Info, "{}", client.buffer);
+    // Check if the commands until the first \n is authorized and if its the
+    // case, dispatch it to the actual function handling it.
+    // And remove the command from the buffer.
+    // And do this WHILE there is \n in the buffer.
+    return (true);
+  }
+  // If there is no authorized command in the buffer:
+  // If the buffer is full, send err msg to client
+  // Else: do nothing and wait.
+  else {
+    if (client.buffer.capacity() == BUFFER_SIZE) {
+    }
+  }
+  return (false);
+}
 bool Server::receive_msg(size_t i) {
   ssize_t check{0};
   char buffer[1024]{0};
-  bool is_client_alive{true};
-
+  Client &client{clients.at(i)};
   // Check contains the number of bytes received.
   errno = 0;
   check = ::recv(clients.at(i).fd, buffer, sizeof(buffer), 0);
   if (check == 0) {
     logger.log(LogLevel::Info, "Client {} disconnected properly.",
                clients_poll[i].fd);
-    is_client_alive = false;
+    client.alive = false;
   } else if (check < 0) {
     // We have to check these errors even if check event with poll() because of
     // spurious wakeup
     if (errno == EWOULDBLOCK || errno == EAGAIN) {
-      return (is_client_alive);
+      return (client.alive);
     }
     logger.log(LogLevel::Error, "Client: {}.", clients_poll[i].fd);
     logger.log(LogLevel::Error, "{}", std::strerror(errno));
-    is_client_alive = false;
+    client.alive = false;
   } else {
-    // Read only the number of bytes received
-    std::string command{buffer, (size_t)check};
-    if (command == "QUIT") {
-      logger.log(LogLevel::Info, "The player {} left the game.",
-                 clients_poll[i].fd);
-      is_client_alive = false;
-    } else {
-      logger.log(LogLevel::Info, "|{}|", command);
-    }
+    // Append in the buffer only the number of bytes received
+    clients.at(i).buffer.append(buffer, check);
+    process_msg(clients.at(i));
   }
-  return (is_client_alive);
-}
-
-bool process_msg(std::string msg) {
-  if (msg.contains("\n")) {
-    // Check if its a valid msg, process it, substract it from the vector till
-    // the delimiter (\n)
-    return (1);
-  }
-  return (0);
+  return (client.alive);
 }
 
 void Server::run() {
