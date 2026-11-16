@@ -2,6 +2,8 @@
 #include "gui/asset_manager.hpp"
 #include "gui/button.hpp"
 #include "gui/room.hpp"
+#include "gui/inventory.hpp"
+#include "gui/item.hpp"
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -57,6 +59,7 @@ int main(void)
     Rectangle item2 = { 615.0f, 818.0f, 310.0f, 55.0f };
     Rectangle item3 = { 1165.0f, 491.0f, 310.0f, 55.0f };
     Rectangle item4 = { 1182.0f, 818.0f, 290.0f, 55.0f };
+    float shopClickTimers[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     // --- VARIABLES COMBAT ---
     Texture2D fightTexture = manager.getFightTexture(); 
@@ -77,6 +80,12 @@ int main(void)
     float fightTimer = 0.0f;
     int pFrame = 0;
     int nFrame = 3;
+
+    Inventory inventory(manager);
+    Item whey = Item("Whey Protein", ItemType::CONSUMABLE, manager.getWheyTexture(), 25, 1);
+    Item creatine = Item("Creatine", ItemType::CONSUMABLE, manager.getCreatineTexture(), 15, 1);
+    Item testo = Item("Testo", ItemType::BOOSTER, manager.getTestoTexture(), 10, 1);
+    Item supplements = Item("Supplements", ItemType::CONSUMABLE, manager.getSupplementsTexture(), 20, 1);
 
     enum class Rooms { Reception, LockerRoom, Muscu, Cardio };
     Rooms currentRoom {Rooms::Reception};
@@ -146,19 +155,49 @@ int main(void)
             case Rooms::Muscu:      current_hitboxes = Muscu.getHitboxes(); break;
             case Rooms::Cardio:     current_hitboxes = Cardio.getHitboxes(); break;
         }
+
+        if (!isShopOpen && !isFighting && !npcButton.getIsTalking() && IsKeyPressed(KEY_I)) {
+            inventory.Toggle();
+        }
         
         if (isShopOpen) {
+            // Décrémente les timers actifs
+            for (int i = 0; i < 4; ++i) {
+                if (shopClickTimers[i] > 0.0f) {
+                    shopClickTimers[i] -= dt;
+                }
+            }
+
             Vector2 mousePos = GetMousePosition();
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                if (CheckCollisionPointRec(mousePos, item1)) {} 
-                else if (CheckCollisionPointRec(mousePos, item2)) {}
-                else if (CheckCollisionPointRec(mousePos, item3)) {}
-                else if (CheckCollisionPointRec(mousePos, item4)) {}
+                if (CheckCollisionPointRec(mousePos, item1)) {
+                    inventory.AddItem(Item("Whey Protein", ItemType::CONSUMABLE, manager.getWheyTexture(), 25, 1));
+                    shopClickTimers[0] = 0.5f;
+                }
+                else if (CheckCollisionPointRec(mousePos, item2)) {
+                    inventory.AddItem(Item("Creatine", ItemType::CONSUMABLE, manager.getCreatineTexture(), 15, 1));
+                    shopClickTimers[1] = 0.5f;
+                }
+                else if (CheckCollisionPointRec(mousePos, item3)) {
+                    inventory.AddItem(Item("Testo", ItemType::BOOSTER, manager.getTestoTexture(), 25, 1));
+                    shopClickTimers[2] = 0.5f;
+                }
+                else if (CheckCollisionPointRec(mousePos, item4)) {
+                    inventory.AddItem(Item("Supplements", ItemType::CONSUMABLE, manager.getSupplementsTexture(), 20, 1));
+                    shopClickTimers[3] = 0.5f;
+                }
             }
 
             if (IsKeyPressed(KEY_ESCAPE)) {
                 shopButton.setIsTalking(false);
+            }
+        }
+        else if (inventory.IsOpen()) {
+            int bonusDamage = 0;
+            std::string cmd = inventory.Update(GetMousePosition(), playerHP, bonusDamage);
+            if (!cmd.empty()) {
+                // Plus tard : sendToServer(cmd);
             }
         }
         else if (isFighting)
@@ -361,11 +400,10 @@ int main(void)
             
             DrawTextureEx(shopTexture, shopPos, 0.0f, shopScale, WHITE);
 
-            Vector2 mousePos = GetMousePosition();
-            DrawRectangleLinesEx(item1, 2.0f, CheckCollisionPointRec(mousePos, item1) ? RED : WHITE);
-            DrawRectangleLinesEx(item2, 2.0f, CheckCollisionPointRec(mousePos, item2) ? RED : WHITE);
-            DrawRectangleLinesEx(item3, 2.0f, CheckCollisionPointRec(mousePos, item3) ? RED : WHITE);
-            DrawRectangleLinesEx(item4, 2.0f, CheckCollisionPointRec(mousePos, item4) ? RED : WHITE);
+            DrawRectangleLinesEx(item1, 2.0f, shopClickTimers[0] > 0.0f ? RED : WHITE);
+            DrawRectangleLinesEx(item2, 2.0f, shopClickTimers[1] > 0.0f ? RED : WHITE);
+            DrawRectangleLinesEx(item3, 2.0f, shopClickTimers[2] > 0.0f ? RED : WHITE);
+            DrawRectangleLinesEx(item4, 2.0f, shopClickTimers[3] > 0.0f ? RED : WHITE);
         }
         else if (isFighting)
         {
@@ -409,7 +447,7 @@ int main(void)
         else {
             npcButton.DrawDialog(screenWidth, screenHeight);
         }
-
+        inventory.Draw(screenWidth, screenHeight);
         EndDrawing();
     }
     
@@ -417,4 +455,4 @@ int main(void)
     CloseWindow();
 
     return 0;
-}
+}   

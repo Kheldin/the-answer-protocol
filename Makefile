@@ -11,7 +11,8 @@ OBJ_DIR     = obj
 
 SERVER_SRCS = src/network/server.cpp src/utils/logger.cpp
 CLI_SRCS    = src/cli/cli_client.cpp
-GUI_SRCS		= src/client_gui.cpp
+GUI_SRCS	= src/gui/client_gui.cpp src/gui/asset_manager.cpp src/gui/button.cpp \
+			  src/gui/room.cpp src/gui/inventory.cpp src/gui/item.cpp
 
 
 SERVER_OBJS = $(SERVER_SRCS:%.cpp=$(OBJ_DIR)/%.o)

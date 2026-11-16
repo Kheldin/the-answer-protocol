@@ -40,6 +40,12 @@ void AssetManager::LoadAll()
     lockerroom_hitboxes = {};
     muscu_hitboxes = {};
     cardio_hitboxes = {};
+
+    // items textures
+    wheyTexture = LoadTexture("src/gui/assets/items/whey.png");
+    creatineTexture = LoadTexture("src/gui/assets/items/creatine.png");
+    testoTexture = LoadTexture("src/gui/assets/items/testo.png");
+    supplementsTexture = LoadTexture("src/gui/assets/items/supplements.png");
 }
 
 void AssetManager::UnloadAll()
