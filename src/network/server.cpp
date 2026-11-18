@@ -3,15 +3,22 @@
 #include <atomic>
 #include <cerrno>
 #include <csignal>
+#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <netinet/in.h>
 #include <poll.h>
 #include <print>
+#include <string>
+#include <string_view>
+#include <sys/poll.h>
 #include <sys/socket.h>
+#include <system_error>
 #include <unistd.h>
 
+static constexpr std::array<std::string_view, 8> COMMANDS{"CONNECT", "LOOK",
+                                                          "QUIT"};
 std::atomic<bool> is_running{false};
 Server::Server() {
   // AF_INET: IPv4 protocol
@@ -42,14 +49,13 @@ Server::Server() {
   monitor.fd = sockfd;
   monitor.events = POLLIN;
   monitor.revents = 0;
-  clients_fds.push_back(monitor);
-  Client mon_client{monitor};
-  clients.push_back(mon_client);
+  clients_poll.emplace_back(monitor);
+  clients.emplace_back(monitor.fd);
 }
 
 Server::~Server() {
   errno = 0;
-  for (pollfd sock : clients_fds) {
+  for (pollfd sock : clients_poll) {
     if (close(sock.fd) == -1) {
       std::println("An error happended when closing fd {}.", sock.fd);
       std::println("{}", strerror(errno));
@@ -73,64 +79,107 @@ void Server::accept_new_client() {
   errno = 0;
   int clientSocket{accept(getfd(), nullptr, nullptr)};
   if (clientSocket == -1) {
-    std::cerr << "An error happended when accepting new client: "
-              << std::strerror(errno) << "\n";
+    const int err = errno;
+    logger.log(LogLevel::Critical,
+               "An error happened when accepting new client: {}",
+               std::generic_category().message(err));
     return;
   }
   logger.log(LogLevel::Info, "New connection request.");
   pollfd pollstruct{};
-  pollstruct.fd = clientSocket;
   pollstruct.events = POLLIN;
   pollstruct.revents = 0;
-  Client client{Client(pollstruct)};
-  clients_fds.push_back(pollstruct);
-  clients.push_back(client);
-  ::send(pollstruct.fd, "OK hello proto=1", 16, 0);
+  pollstruct.fd = clientSocket;
+  clients.emplace_back(clientSocket);
+  clients_poll.emplace_back(pollstruct);
+
+  static constexpr std::string_view greeting = "OK hello proto=1\n";
+  ::send(clientSocket, greeting.data(), greeting.size(),
+         MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Info, "New client accepted.");
+}
+
+std::string_view Command::extract_command_type(std::string_view buffer) {
+  size_t index{buffer.find_first_of(' ')};
+  int i{0};
+  for (std::string_view str : COMMANDS) {
+    if (str == buffer.substr(0, index)) {
+      return (COMMANDS[i]);
+    }
+    i++;
+  }
+  return "unknown";
+}
+
+std::string_view Command::extract_command_content(std::string_view buffer) {
+  size_t index{buffer.find_first_of(' ')};
+  return (buffer.substr(index + 1, buffer.find_first_of('\n') - index - 1));
+}
+
+void Server::send_unknown_command(Client &client) {
+  static constexpr std::string_view unknown_command{
+      "500 Unknown or malformed command."};
+  ::send(client.fd, unknown_command.data(), unknown_command.size(),
+         MSG_DONTWAIT | MSG_NOSIGNAL);
+  logger.log(LogLevel::Warning, "{}", unknown_command);
+  client.buffer.erase();
+}
+
+bool Server::process_msg(Client &client) {
+  // logger.log(LogLevel::Debug, "Buffer cap = {}\n buffer size = {}",
+  //            client.buffer.capacity(), client.buffer.size());
+  if (client.buffer.contains(
+          "\n")) { // will be a while when we remove the command
+    // Check if the commands until the first \n is authorized and if its the
+    // case, dispatch it to the actual function handling it.
+    // And remove the command from the buffer.
+    // And do this WHILE there is \n in the buffer.
+    Command command{client.buffer};
+    // logger.log(LogLevel::Debug, "type = {}", command.type);
+    // logger.log(LogLevel::Debug, "content = {}", command.content);
+    dispatch_command(client, command);
+    client.buffer.erase(0, client.buffer.find_first_of('\n') + 1);
+    return (true);
+  }
+  // If there is no authorized command in the buffer:
+  // If the buffer is full, send err msg to client
+  // Else: do nothing and wait.
+  else {
+    // if the client's buffer is already full and there is not the delimiter,
+    // the command is unknown
+    if (client.buffer.size() > BUFFER_SIZE) {
+      send_unknown_command(client);
+    }
+  }
+  return (false);
 }
 
 bool Server::receive_msg(size_t i) {
   ssize_t check{0};
-  char buffer[1024]{0};
-  bool is_client_alive{true};
-
+  char buffer[BUFFER_SIZE]{0};
+  Client &client{clients.at(i)};
   // Check contains the number of bytes received.
   errno = 0;
-  check = ::recv(clients.at(i).pollstruct.fd, buffer, sizeof(buffer), 0);
+  check = ::recv(clients.at(i).fd, buffer, sizeof(buffer), MSG_DONTWAIT);
+
   if (check == 0) {
     logger.log(LogLevel::Info, "Client {} disconnected properly.",
-               clients_fds[i].fd);
-    is_client_alive = false;
+               clients_poll[i].fd);
+    client.alive = false;
   } else if (check < 0) {
     // We have to check these errors even if check event with poll() because of
     // spurious wakeup
     if (errno == EWOULDBLOCK || errno == EAGAIN) {
-      return (is_client_alive);
+      return (client.alive);
     }
-    logger.log(LogLevel::Error, "Client: {}.", clients_fds[i].fd);
+    logger.log(LogLevel::Error, "Client: {}.", clients_poll[i].fd);
     logger.log(LogLevel::Error, "{}", std::strerror(errno));
-    is_client_alive = false;
+    client.alive = false;
   } else {
-    // Read only the number of bytes received
-    std::string command{buffer, (size_t)check};
-    if (command == "QUIT") {
-      logger.log(LogLevel::Info, "The player {} left the game.",
-                 clients_fds[i].fd);
-      is_client_alive = false;
-    } else {
-      logger.log(LogLevel::Info, "|{}|", command);
-    }
+    client.buffer.append(buffer, check);
+    process_msg(clients.at(i));
   }
-  return (is_client_alive);
-}
-
-bool process_msg(std::string msg) {
-  if (msg.contains("\n")) {
-    // Check if its a valid msg, process it, substract it from the vector till
-    // the delimiter (\n)
-    return (1);
-  }
-  return (0);
+  return (client.alive);
 }
 
 void Server::run() {
@@ -143,37 +192,34 @@ void Server::run() {
     //  -1 = errors and errno is set to indicate the error.
     // nb: Explain in readMe the choice of poll instead of epoll.
     errno = 0;
-    if (::poll(clients_fds.data(), clients_fds.size(), -1) < 0) {
+    if (::poll(clients_poll.data(), clients_poll.size(), -1) < 0) {
       if (errno == EINTR) {
         logger.log(LogLevel::Warning,
                    "A signal occurred before any requested event");
       } else {
-        std::cerr << "Error on poll(): " << "\n";
-        std::cerr << strerror(errno) << "\n";
-        break;
+        const int err = errno;
+        logger.log(LogLevel::Critical, "Error on poll(): {}",
+                   std::generic_category().message(err));
+        is_running = false;
       }
     }
 
     // We go through the list to see which fd moved
-    for (size_t i{0}; i < clients_fds.size(); ++i) {
-      if (clients_fds[i].revents & POLLERR) {
-        close(clients_fds[i].fd);
-        clients_fds.erase(clients_fds.begin() + i);
+    for (size_t i{0}; i < clients_poll.size(); ++i) {
+      const int err{errno};
+      if (clients_poll[i].revents & (POLLERR | POLLNVAL | POLLHUP)) {
+        if (clients_poll[i].revents & POLLHUP) {
+          logger.log(LogLevel::Info, "Connection terminated for fd {}",
+                     clients_poll[i].fd);
+        } else {
+          logger.log(LogLevel::Critical, "Error on fd {}: {}",
+                     clients_poll[i].fd, std::generic_category().message(err));
+        }
+        close(clients_poll[i].fd);
+        clients_poll.erase(clients_poll.begin() + i);
+        clients.erase(clients.begin() + i);
         i--;
-        std::cerr << "Error on fd " << clients_fds[i].fd << "\n";
-        std::cerr << strerror(errno) << "\n";
-        is_running = false;
-        break;
-      } else if (clients_fds[i].revents & POLLNVAL) {
-        std::cerr << "Fd " << i << " not open." << "\n";
-        std::cerr << strerror(errno) << "\n";
-      } else if (clients_fds[i].revents & POLLHUP) {
-        logger.log(LogLevel::Info, "Connection terminated for fd {}",
-                   clients_fds[i].fd);
-        close(clients_fds[i].fd);
-        clients_fds.erase(clients_fds.begin() + i);
-        i--;
-      } else if (clients_fds[i].revents & POLLIN) {
+      } else if (clients_poll[i].revents & POLLIN) {
         // The index 0 is the server socket.
         // If the server socket is readable, it means that a client wants to
         // connect to the server.
@@ -181,8 +227,9 @@ void Server::run() {
           accept_new_client();
         } else {
           if (!receive_msg(i)) {
-            close(clients_fds[i].fd);
-            clients_fds.erase(clients_fds.begin() + i);
+            close(clients_poll[i].fd);
+            clients_poll.erase(clients_poll.begin() + i);
+            clients.erase(clients.begin() + i);
             i--;
           }
         }
