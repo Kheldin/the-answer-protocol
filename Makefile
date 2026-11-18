@@ -3,8 +3,8 @@ CLI_NAME    = cli.out
 GUI_NAME		= gui.out
 
 CXX         = clang++ 
-# -fexperimental-library 
-CXXFLAGS    = -stdlib=libc++ -Wall -Wextra -Werror -g3 -std=c++23 -MMD -MP -Iinclude
+# -fexperimental-library
+CXXFLAGS    = -stdlib=libc++ -Wall -Wextra -Werror -g3 -std=c++23 -MMD -MP -Iinclude -pthread
 GUIFLAGS		= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 
 
 OBJ_DIR     = obj
@@ -19,7 +19,7 @@ CLI_OBJS    = $(CLI_SRCS:%.cpp=$(OBJ_DIR)/%.o)
 GUI_OBJS    = $(GUI_SRCS:%.cpp=$(OBJ_DIR)/%.o)
 DEPS        = $(SERVER_OBJS:.o=.d) $(CLI_OBJS:.o=.d) $(GUI_OBJS:.o=.d)
 
-all: $(SERVER_NAME) $(CLI_NAME)
+all: $(SERVER_NAME) $(CLI_NAME) $(GUI_NAME)
 
 $(SERVER_NAME): $(SERVER_OBJS)
 	$(CXX) $(CXXFLAGS) $(SERVER_OBJS) -o $@
