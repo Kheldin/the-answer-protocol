@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cerrno>
 #include <csignal>
+#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -16,6 +17,8 @@
 #include <system_error>
 #include <unistd.h>
 
+static constexpr std::array<std::string_view, 8> COMMANDS{"CONNECT", "LOOK",
+                                                          "QUIT"};
 std::atomic<bool> is_running{false};
 Server::Server() {
   // AF_INET: IPv4 protocol
@@ -91,35 +94,74 @@ void Server::accept_new_client() {
   clients_poll.emplace_back(pollstruct);
 
   static constexpr std::string_view greeting = "OK hello proto=1\n";
-  ::send(clientSocket, greeting.data(), greeting.size(), 0);
+  ::send(clientSocket, greeting.data(), greeting.size(),
+         MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Info, "New client accepted.");
 }
 
+std::string_view Command::extract_command_type(std::string_view buffer) {
+  size_t index{buffer.find_first_of(' ')};
+  int i{0};
+  for (std::string_view str : COMMANDS) {
+    if (str == buffer.substr(0, index)) {
+      return (COMMANDS[i]);
+    }
+    i++;
+  }
+  return "unknown";
+}
+
+std::string_view Command::extract_command_content(std::string_view buffer) {
+  size_t index{buffer.find_first_of(' ')};
+  return (buffer.substr(index + 1, buffer.find_first_of('\n') - index - 1));
+}
+
+void Server::send_unknown_command(Client &client) {
+  static constexpr std::string_view unknown_command{
+      "500 Unknown or malformed command."};
+  ::send(client.fd, unknown_command.data(), unknown_command.size(),
+         MSG_DONTWAIT | MSG_NOSIGNAL);
+  logger.log(LogLevel::Warning, "{}", unknown_command);
+  client.buffer.erase();
+}
+
 bool Server::process_msg(Client &client) {
-  if (client.buffer.contains("\n")) {
-    logger.log(LogLevel::Info, "{}", client.buffer);
+  // logger.log(LogLevel::Debug, "Buffer cap = {}\n buffer size = {}",
+  //            client.buffer.capacity(), client.buffer.size());
+  if (client.buffer.contains(
+          "\n")) { // will be a while when we remove the command
     // Check if the commands until the first \n is authorized and if its the
     // case, dispatch it to the actual function handling it.
     // And remove the command from the buffer.
     // And do this WHILE there is \n in the buffer.
+    Command command{client.buffer};
+    // logger.log(LogLevel::Debug, "type = {}", command.type);
+    // logger.log(LogLevel::Debug, "content = {}", command.content);
+    dispatch_command(client, command);
+    client.buffer.erase(0, client.buffer.find_first_of('\n') + 1);
     return (true);
   }
   // If there is no authorized command in the buffer:
   // If the buffer is full, send err msg to client
   // Else: do nothing and wait.
   else {
-    if (client.buffer.capacity() == BUFFER_SIZE) {
+    // if the client's buffer is already full and there is not the delimiter,
+    // the command is unknown
+    if (client.buffer.size() > BUFFER_SIZE) {
+      send_unknown_command(client);
     }
   }
   return (false);
 }
+
 bool Server::receive_msg(size_t i) {
   ssize_t check{0};
-  char buffer[1024]{0};
+  char buffer[BUFFER_SIZE]{0};
   Client &client{clients.at(i)};
   // Check contains the number of bytes received.
   errno = 0;
-  check = ::recv(clients.at(i).fd, buffer, sizeof(buffer), 0);
+  check = ::recv(clients.at(i).fd, buffer, sizeof(buffer), MSG_DONTWAIT);
+
   if (check == 0) {
     logger.log(LogLevel::Info, "Client {} disconnected properly.",
                clients_poll[i].fd);
@@ -134,8 +176,7 @@ bool Server::receive_msg(size_t i) {
     logger.log(LogLevel::Error, "{}", std::strerror(errno));
     client.alive = false;
   } else {
-    // Append in the buffer only the number of bytes received
-    clients.at(i).buffer.append(buffer, check);
+    client.buffer.append(buffer, check);
     process_msg(clients.at(i));
   }
   return (client.alive);
