@@ -292,3 +292,9 @@
 |
 [2026-11-16 16:52:49] INFO: Client 5 disconnected properly.
 [2026-11-16 17:14:26] WARNING: A signal occurred before any requested event
+[2026-11-19 18:12:20] INFO: Server is listening.
+[2026-11-19 18:12:32] INFO: New connection request.
+[2026-11-19 18:12:32] INFO: New client accepted.
+[2026-11-19 18:14:22] WARNING: A signal occurred before any requested event
+[2026-11-19 20:38:49] INFO: Server is listening.
+[2026-11-19 20:42:54] WARNING: A signal occurred before any requested event

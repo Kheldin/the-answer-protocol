@@ -5,6 +5,7 @@
 #include "gui/inventory.hpp"
 #include "gui/item.hpp"
 #include "gui/quest_log.hpp"
+#include "player.hpp"
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -111,8 +112,7 @@ int main(void)
     bool isFighting = false;
     bool wasFighting = false;
 
-    int playerHP = 100, npcHP = 100;
-    int bonusDamage = 0;
+    int npcHP = 100;
     enum class FightState { PLAYER_WAIT, PLAYER_QTE, PLAYER_ATTACK, NPC_WAIT, NPC_ATTACK, END };
     FightState fState = FightState::PLAYER_WAIT;
     int qteKey = 0; 
@@ -120,7 +120,9 @@ int main(void)
     int pFrame = 0;
     int nFrame = 3;
 
+    // --- INSTANCE DU JOUEUR, INVENTAIRE & QUÊTES ---
     Inventory inventory(manager);
+    Player player("Antoine", 100);
     QuestLog questLog;
 
     enum class Rooms { Reception, LockerRoom, Muscu, Cardio, Pool, Climbing, Sauna, Masage };
@@ -164,11 +166,6 @@ int main(void)
         bool inReception = (currentRoom == Rooms::Reception);
         bool inMuscu = (currentRoom == Rooms::Muscu);
         bool inCardio = (currentRoom == Rooms::Cardio);
-        // bool inSauna = (currentRoom == Rooms::Sauna);
-        // bool inClimbing = (currentRoom == Rooms::Climbing);
-        // bool inMasage = (currentRoom == Rooms::Masage);
-        // bool inPool = (currentRoom == Rooms::Pool);
-        // bool inLockerRoom = (currentRoom == Rooms::LockerRoom);
 
         npcButton.Update(playerHitbox, inReception);
         shopButton.Update(playerHitbox, inReception);
@@ -223,7 +220,7 @@ int main(void)
         isFighting = fightButton.getIsTalking();
 
         if (isFighting && !wasFighting) {
-            playerHP = 100;
+            player.heal(player.getMaxHp());
             npcHP = 100;
             fState = FightState::PLAYER_WAIT;
             fightTimer = 1.0f;
@@ -240,10 +237,10 @@ int main(void)
             case Rooms::Reception:  current_hitboxes = Reception.getHitboxes(); break;
             case Rooms::LockerRoom: current_hitboxes = LockerRoom.getHitboxes(); break;
             case Rooms::Muscu:      current_hitboxes = Muscu.getHitboxes(); break;
-            case Rooms::Cardio: current_hitboxes = Cardio.getHitboxes(); break;
-            case Rooms::Pool: current_hitboxes = Cardio.getHitboxes(); break;
-            case Rooms::Climbing: current_hitboxes = Cardio.getHitboxes(); break;
-            case Rooms::Sauna: current_hitboxes = Cardio.getHitboxes(); break;
+            case Rooms::Cardio:
+            case Rooms::Pool:
+            case Rooms::Climbing:
+            case Rooms::Sauna:
             case Rooms::Masage:     current_hitboxes = Cardio.getHitboxes(); break;
         }
 
@@ -291,7 +288,10 @@ int main(void)
             }
         }
         else if (inventory.IsOpen()) {
-            std::string cmd = inventory.Update(GetMousePosition(), playerHP, bonusDamage);
+            std::string cmd = inventory.Update(GetMousePosition(), player.hpRef(), player.bonusDamageRef());
+            if (player.getHp() > player.getMaxHp()) {
+                player.hpRef() = player.getMaxHp();
+            }
             if (!cmd.empty()) {
                 // Plus tard : sendToServer(cmd);
             }
@@ -314,6 +314,7 @@ int main(void)
 
             if (exerciseDurationTimer >= 6.0f) {
                 questLog.AdvanceQuest(pendingQuestId, 1);
+                player.addXp(50);
                 activeExercise = ExerciseType::NONE;
                 pendingQuestId = "";
             }
@@ -340,7 +341,7 @@ int main(void)
                         int key = GetKeyPressed();
                         if (key != 0) {
                             if (key == qteKey) {
-                                npcHP -= (35 + bonusDamage);
+                                npcHP -= (35 + player.getBonusDamage());
                                 qteKey = 1;
                             } else {
                                 qteKey = 0;
@@ -359,6 +360,7 @@ int main(void)
                         if (npcHP <= 0) {
                             fState = FightState::END;
                             questLog.AdvanceQuest("heavy_weight", 1);
+                            player.addXp(100);
                         }
                         else { fightTimer = 1.0f; fState = FightState::NPC_WAIT; }
                     }
@@ -369,19 +371,19 @@ int main(void)
                     if (fightTimer <= 0) {
                         fightTimer = 1.0f;
                         fState = FightState::NPC_ATTACK;
-                        playerHP -= 20;
+                        player.takeDamage(20);
                     }
                     break;
                 case FightState::NPC_ATTACK:
                     fightTimer -= dt;
                     pFrame = 3; nFrame = 2;
                     if (fightTimer <= 0) {
-                        if (playerHP <= 0) fState = FightState::END;
+                        if (!player.isAlive()) fState = FightState::END;
                         else { fightTimer = 1.0f; fState = FightState::PLAYER_WAIT; }
                     }
                     break;
                 case FightState::END:
-                    pFrame = (playerHP > 0) ? 0 : 3;
+                    pFrame = player.isAlive() ? 0 : 3;
                     nFrame = (npcHP > 0) ? 3 : 0;
                     if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_ENTER)) {
                         fightButton.setIsTalking(false);
@@ -441,6 +443,7 @@ int main(void)
                 }
             }
         }
+
         switch (currentRoom)
         {
             case Rooms::Reception:
@@ -571,8 +574,6 @@ int main(void)
                 break;
         }
         
-        DrawText(TextFormat("X: %d Y: %d", GetMouseX(), GetMouseY()), 10, 10, 20, WHITE);
-        
         if (!isExercising) {
             DrawTexturePro(current_guy, frameRec, destRec, origin, 0.0f, WHITE);
             DrawRectangleLinesEx(playerHitbox, 2.0f, RED);
@@ -650,7 +651,7 @@ int main(void)
             Rectangle nDest = { 3.0f*screenWidth/4.0f - 50.0f - (nFrameW*spriteScale)/2.0f, screenHeight/2.0f - (nFrameH*spriteScale)/2.0f + 50, nFrameW * spriteScale, nFrameH * spriteScale };
             DrawTexturePro(rightFightTexture, nSrc, nDest, {0,0}, 0.0f, WHITE);
 
-            DrawText(TextFormat("PLAYER HP: %d", playerHP), screenWidth/4 - 100, 50, 30, GREEN);
+            DrawText(TextFormat("PLAYER HP: %d", player.getHp()), screenWidth/4 - 100, 50, 30, GREEN);
             DrawText(TextFormat("NPC HP: %d", npcHP), 3*screenWidth/4 - 80, 50, 30, RED);
 
             if (fState == FightState::PLAYER_QTE) {
@@ -661,13 +662,64 @@ int main(void)
                 if (qteKey == 1) DrawText("HIT!", screenWidth/2 - 50, screenHeight/2 - 100, 50, GREEN);
                 else DrawText("MISS!", screenWidth/2 - 60, screenHeight/2 - 100, 50, RED);
             } else if (fState == FightState::END) {
-                if (playerHP > 0) DrawText("YOU WIN!", screenWidth/2 - 100, screenHeight/2 - 100, 50, GREEN);
+                if (player.isAlive()) DrawText("YOU WIN!", screenWidth/2 - 100, screenHeight/2 - 100, 50, GREEN);
                 else DrawText("YOU LOSE!", screenWidth/2 - 110, screenHeight/2 - 100, 50, RED);
                 DrawText("Press ENTER or ESC to exit", screenWidth/2 - 140, screenHeight/2, 20, WHITE);
             }
         }
         else {
             npcButton.DrawDialog(screenWidth, screenHeight);
+        }
+
+        // --- HUD JOUEUR (EN HAUT À GAUCHE) ---
+        {
+            const int hudX = 20;
+            const int hudY = 20;
+            const int hudW = 300;
+            const int hudH = 115;
+
+            DrawRectangleRounded({ (float)hudX, (float)hudY, (float)hudW, (float)hudH }, 0.15f, 8, Fade(BLACK, 0.75f));
+            DrawRectangleRoundedLines({ (float)hudX, (float)hudY, (float)hudW, (float)hudH }, 0.15f, 8, Fade(WHITE, 0.4f));
+
+            // Nom & Niveau
+            DrawText(player.getName().c_str(), hudX + 15, hudY + 12, 22, WHITE);
+            const char* lvlText = TextFormat("LVL %d", player.getLevel());
+            DrawText(lvlText, hudX + hudW - MeasureText(lvlText, 22) - 15, hudY + 12, 22, GOLD);
+
+            // Barre de PV
+            float hpRatio = (player.getMaxHp() > 0) ? (float)player.getHp() / (float)player.getMaxHp() : 0.0f;
+            Color hpColor = (hpRatio > 0.5f) ? GREEN : ((hpRatio > 0.25f) ? ORANGE : RED);
+            DrawRectangle(hudX + 15, hudY + 46, hudW - 30, 22, DARKGRAY);
+            DrawRectangle(hudX + 15, hudY + 46, (int)((hudW - 30) * hpRatio), 22, hpColor);
+            DrawRectangleLines(hudX + 15, hudY + 46, hudW - 30, 22, WHITE);
+            DrawText(TextFormat("HP: %d / %d", player.getHp(), player.getMaxHp()), hudX + 22, hudY + 49, 16, WHITE);
+
+            // Barre d'XP (seuil = level * 100)
+            int xpNeeded = player.getLevel() * 100;
+            float xpRatio = (xpNeeded > 0) ? (float)player.getXp() / (float)xpNeeded : 0.0f;
+            if (xpRatio > 1.0f) xpRatio = 1.0f;
+            DrawRectangle(hudX + 15, hudY + 78, hudW - 30, 18, DARKGRAY);
+            DrawRectangle(hudX + 15, hudY + 78, (int)((hudW - 30) * xpRatio), 18, SKYBLUE);
+            DrawRectangleLines(hudX + 15, hudY + 78, hudW - 30, 18, WHITE);
+            DrawText(TextFormat("XP: %d / %d", player.getXp(), xpNeeded), hudX + 22, hudY + 80, 14, WHITE);
+        }
+
+        // --- ENCADRÉ DES TOUCHES (EN BAS À GAUCHE) ---
+        {
+            const int boxW = 270;
+            const int boxH = 145;
+            const int boxX = 20;
+            const int boxY = screenHeight - boxH - 20;
+
+            DrawRectangleRounded({ (float)boxX, (float)boxY, (float)boxW, (float)boxH }, 0.15f, 8, Fade(BLACK, 0.75f));
+            DrawRectangleRoundedLines({ (float)boxX, (float)boxY, (float)boxW, (float)boxH }, 0.15f, 8, Fade(WHITE, 0.4f));
+
+            DrawText("CONTROLS", boxX + 15, boxY + 10, 18, YELLOW);
+            DrawText("[Arrows]  Move", boxX + 15, boxY + 36, 16, LIGHTGRAY);
+            DrawText("[E/Enter] Interact", boxX + 15, boxY + 58, 16, LIGHTGRAY);
+            DrawText("[I]       Inventory", boxX + 15, boxY + 80, 16, LIGHTGRAY);
+            DrawText("[Q]       Quests / Tasks", boxX + 15, boxY + 102, 16, LIGHTGRAY);
+            DrawText("[ESC]     Close Menu", boxX + 15, boxY + 124, 16, LIGHTGRAY);
         }
 
         questLog.DrawTracker(screenWidth);

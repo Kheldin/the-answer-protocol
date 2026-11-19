@@ -11,13 +11,7 @@
 #include <unistd.h>
 #include <vector>
 #define BUFFER_SIZE 22 // 1023 "effective" bytes to keep the 1024th for the \0
-
-class Player {
-public:
-  std::string username{};
-
-private:
-};
+#include "player.hpp"
 
 class Client {
 public:

@@ -9,11 +9,11 @@ GUIFLAGS		= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 
 OBJ_DIR     = obj
 
-SERVER_SRCS = src/network/server.cpp src/utils/logger.cpp
+SERVER_SRCS = src/network/server.cpp src/utils/logger.cpp src/utils/utils.cpp src/network/server_commands.cpp
 CLI_SRCS    = src/cli/cli_client.cpp
 GUI_SRCS	= src/gui/client_gui.cpp src/gui/asset_manager.cpp src/gui/button.cpp \
 			  src/gui/room.cpp src/gui/inventory.cpp src/gui/item.cpp src/gui/quest.cpp \
-			  src/gui/quest_log.cpp
+			  src/gui/quest_log.cpp src/player.cpp
 
 
 SERVER_OBJS = $(SERVER_SRCS:%.cpp=$(OBJ_DIR)/%.o)
