@@ -9,7 +9,7 @@ void AssetManager::LoadAll()
     player_textures["guy_right1"] = LoadTexture("src/gui/assets/normal/walk_right1.png");
     player_textures["guy_right2"] = LoadTexture("src/gui/assets/normal/walk_right2.png");
     player_textures["guy_right3"] = LoadTexture("src/gui/assets/normal/walk_right3.png");
-    
+
     player_textures["guy_front"] = LoadTexture("src/gui/assets/normal/normal_front.png");
     player_textures["guy_back"]  = LoadTexture("src/gui/assets/normal/normal_back.png");
 
@@ -17,11 +17,19 @@ void AssetManager::LoadAll()
     lockerroom_textures["background"] = LoadTexture("src/gui/assets/background/lockerroom.png");
     muscu_textures["background"] = LoadTexture("src/gui/assets/background/muscu.png");
     cardio_textures["background"] = LoadTexture("src/gui/assets/background/cardio.png");
+    poolTexture["background"] = LoadTexture("src/gui/assets/background/pool.png");
+    climbingTexture["background"] = LoadTexture("src/gui/assets/background/climbing.png");
+    saunaTexture["background"] = LoadTexture("src/gui/assets/background/sauna.png");
+    masageTexture["background"] = LoadTexture("src/gui/assets/background/masage.png");
 
     shop_texture = LoadTexture("src/gui/assets/shop.png");
-    fightTexture = LoadTexture("src/gui/assets/fight_background.png");
+    fightTexture = LoadTexture("src/gui/assets/background/fight_background.png");
     left_fightTexture = LoadTexture("src/gui/assets/left_fight.png");
     right_fightTexture = LoadTexture("src/gui/assets/right_fight.png");
+
+    benchPositionsTexture = LoadTexture("src/gui/assets/exercices/bench_positions.png");
+    sprintPositionsTexture = LoadTexture("src/gui/assets/exercices/sprint_positions.png");
+    squatsPositionsTexture = LoadTexture("src/gui/assets/exercices/squats_positions.png");
 
 
     buttonsTexture = LoadTexture("src/gui/assets/interactions/touch.png");
@@ -40,6 +48,12 @@ void AssetManager::LoadAll()
     lockerroom_hitboxes = {};
     muscu_hitboxes = {};
     cardio_hitboxes = {};
+
+    // items textures
+    wheyTexture = LoadTexture("src/gui/assets/items/whey.png");
+    creatineTexture = LoadTexture("src/gui/assets/items/creatine.png");
+    testoTexture = LoadTexture("src/gui/assets/items/testo.png");
+    supplementsTexture = LoadTexture("src/gui/assets/items/supplements.png");
 }
 
 void AssetManager::UnloadAll()

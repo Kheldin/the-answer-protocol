@@ -2,6 +2,9 @@
 #include "gui/asset_manager.hpp"
 #include "gui/button.hpp"
 #include "gui/room.hpp"
+#include "gui/inventory.hpp"
+#include "gui/item.hpp"
+#include "gui/quest_log.hpp"
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -47,6 +50,28 @@ int main(void)
     Room LockerRoom(manager.getLockerRoomTextures(), manager.getLockerRoomTexturesPositions(), manager.getLockerRoomHitboxes());
     Room Muscu(manager.getMuscuTextures(), manager.getMuscuTexturesPositions(), manager.getMuscuHitboxes());
     Room Cardio(manager.getCardioTextures(), manager.getCardioTexturesPositions(), manager.getCardioHitboxes());
+    Room Pool(manager.getPoolTexture(), manager.getCardioTexturesPositions(), manager.getCardioHitboxes());
+    Room Climbing(manager.getClimbingTexture(), manager.getCardioTexturesPositions(), manager.getCardioHitboxes());
+    Room Sauna(manager.getSaunaTexture(), manager.getCardioTexturesPositions(), manager.getCardioHitboxes());
+    Room Masage(manager.getMasageTexture(), manager.getCardioTexturesPositions(), manager.getCardioHitboxes());
+
+    // --- BOUTONS MUSCU ---
+    Rectangle posPress = { 900.0f, 350.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
+    Rectangle zonePress = { posPress.x - 250, posPress.y + 100, posPress.width + 310, posPress.height + 60 };
+    InteractiveButton pressButton(posPress, zonePress, "");
+
+    Rectangle posBench = { 1350.0f, 450.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
+    Rectangle zoneBench = { posBench.x - 250, posBench.y + 100, posBench.width + 310, posBench.height + 60 };
+    InteractiveButton benchButton(posBench, zoneBench, "");
+
+    // --- BOUTONS CARDIO ---
+    Rectangle posBike = { 500.0f, 400.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
+    Rectangle zoneBike = { posBike.x - 250, posBike.y + 100, posBike.width + 310, posBike.height + 60 };
+    InteractiveButton bikeButton(posBike, zoneBike, "");
+
+    Rectangle posTreadmill = { 1100.0f, 400.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
+    Rectangle zoneTreadmill = { posTreadmill.x - 250, posTreadmill.y + 100, posTreadmill.width + 310, posTreadmill.height + 60 };
+    InteractiveButton treadmillButton(posTreadmill, zoneTreadmill, "");
 
     // --- VARIABLES SHOP ---
     Texture2D shopTexture = manager.getShopTexture(); 
@@ -57,6 +82,22 @@ int main(void)
     Rectangle item2 = { 615.0f, 818.0f, 310.0f, 55.0f };
     Rectangle item3 = { 1165.0f, 491.0f, 310.0f, 55.0f };
     Rectangle item4 = { 1182.0f, 818.0f, 290.0f, 55.0f };
+    float shopClickTimers[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+    // --- VARIABLES EXERCICES ---
+    Texture2D benchPositionsTexture = manager.getbenchPositionsTexture(); 
+    Texture2D squatsPositionsTexture = manager.getsquatsPositionsTexture(); 
+    Texture2D sprintPositionsTexture = manager.getsprintPositionsTexture();
+    SetTextureFilter(benchPositionsTexture, TEXTURE_FILTER_POINT);
+    SetTextureFilter(squatsPositionsTexture, TEXTURE_FILTER_POINT);
+    SetTextureFilter(sprintPositionsTexture, TEXTURE_FILTER_POINT);
+
+    enum class ExerciseType { NONE, BENCH, SQUATS, SPRINT };
+    ExerciseType activeExercise = ExerciseType::NONE;
+    std::string pendingQuestId = "";
+    float exerciseDurationTimer = 0.0f;
+    float exerciseSwapTimer = 0.0f;
+    int exerciseFrame = 0;
 
     // --- VARIABLES COMBAT ---
     Texture2D fightTexture = manager.getFightTexture(); 
@@ -66,11 +107,12 @@ int main(void)
     SetTextureFilter(rightFightTexture, TEXTURE_FILTER_POINT);
     
     float fightBgScale = 1.5f;
-    float spriteScale = 1.0f;
+    float spriteScale = 0.8f;
     bool isFighting = false;
     bool wasFighting = false;
 
     int playerHP = 100, npcHP = 100;
+    int bonusDamage = 0;
     enum class FightState { PLAYER_WAIT, PLAYER_QTE, PLAYER_ATTACK, NPC_WAIT, NPC_ATTACK, END };
     FightState fState = FightState::PLAYER_WAIT;
     int qteKey = 0; 
@@ -78,7 +120,10 @@ int main(void)
     int pFrame = 0;
     int nFrame = 3;
 
-    enum class Rooms { Reception, LockerRoom, Muscu, Cardio };
+    Inventory inventory(manager);
+    QuestLog questLog;
+
+    enum class Rooms { Reception, LockerRoom, Muscu, Cardio, Pool, Climbing, Sauna, Masage };
     Rooms currentRoom {Rooms::Reception};
     
     const float HITBOX_OFFSET_X = 5.0f;
@@ -96,7 +141,7 @@ int main(void)
     Rectangle frameRec = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     const float speed = 15.0f;
-    const float scale = 0.6f;
+    float scale = 0.6f;
 
     Rectangle destRec = {
         screenWidth / 2.0f,
@@ -118,10 +163,61 @@ int main(void)
         Rectangle playerHitbox = get_feet_hitbox(destRec.x, destRec.y);
         bool inReception = (currentRoom == Rooms::Reception);
         bool inMuscu = (currentRoom == Rooms::Muscu);
+        bool inCardio = (currentRoom == Rooms::Cardio);
+        // bool inSauna = (currentRoom == Rooms::Sauna);
+        // bool inClimbing = (currentRoom == Rooms::Climbing);
+        // bool inMasage = (currentRoom == Rooms::Masage);
+        // bool inPool = (currentRoom == Rooms::Pool);
+        // bool inLockerRoom = (currentRoom == Rooms::LockerRoom);
 
         npcButton.Update(playerHitbox, inReception);
         shopButton.Update(playerHitbox, inReception);
         fightButton.Update(playerHitbox, inMuscu);
+
+        pressButton.Update(playerHitbox, inMuscu);
+        benchButton.Update(playerHitbox, inMuscu);
+        bikeButton.Update(playerHitbox, inCardio);
+        treadmillButton.Update(playerHitbox, inCardio);
+
+        // --- DÉCLENCHEMENT DES EXERCICES (6 SECONDES) ---
+        if (activeExercise == ExerciseType::NONE) {
+            if (pressButton.getIsTalking()) {
+                activeExercise = ExerciseType::SQUATS;
+                pendingQuestId = "use_press";
+                exerciseDurationTimer = 0.0f;
+                exerciseSwapTimer = 0.0f;
+                exerciseFrame = 0;
+                pressButton.setIsTalking(false);
+            }
+            else if (benchButton.getIsTalking()) {
+                activeExercise = ExerciseType::BENCH;
+                pendingQuestId = "use_bench";
+                exerciseDurationTimer = 0.0f;
+                exerciseSwapTimer = 0.0f;
+                exerciseFrame = 0;
+                benchButton.setIsTalking(false);
+            }
+            else if (bikeButton.getIsTalking()) {
+                activeExercise = ExerciseType::SPRINT;
+                pendingQuestId = "use_bike";
+                exerciseDurationTimer = 0.0f;
+                exerciseSwapTimer = 0.0f;
+                exerciseFrame = 0;
+                bikeButton.setIsTalking(false);
+            }
+            else if (treadmillButton.getIsTalking()) {
+                activeExercise = ExerciseType::SPRINT;
+                pendingQuestId = "use_treadmill";
+                exerciseDurationTimer = 0.0f;
+                exerciseSwapTimer = 0.0f;
+                exerciseFrame = 0;
+                treadmillButton.setIsTalking(false);
+            }
+        }
+
+        if (npcButton.getIsTalking()) {
+            questLog.AdvanceQuest("gym_tour", 1);
+        }
 
         isShopOpen = shopButton.getIsTalking();
         isFighting = fightButton.getIsTalking();
@@ -144,21 +240,82 @@ int main(void)
             case Rooms::Reception:  current_hitboxes = Reception.getHitboxes(); break;
             case Rooms::LockerRoom: current_hitboxes = LockerRoom.getHitboxes(); break;
             case Rooms::Muscu:      current_hitboxes = Muscu.getHitboxes(); break;
-            case Rooms::Cardio:     current_hitboxes = Cardio.getHitboxes(); break;
+            case Rooms::Cardio: current_hitboxes = Cardio.getHitboxes(); break;
+            case Rooms::Pool: current_hitboxes = Cardio.getHitboxes(); break;
+            case Rooms::Climbing: current_hitboxes = Cardio.getHitboxes(); break;
+            case Rooms::Sauna: current_hitboxes = Cardio.getHitboxes(); break;
+            case Rooms::Masage:     current_hitboxes = Cardio.getHitboxes(); break;
+        }
+
+        bool isExercising = (activeExercise != ExerciseType::NONE);
+        bool canOpenMenu = !isShopOpen && !isFighting && !isExercising && !npcButton.getIsTalking();
+        if (canOpenMenu && !questLog.IsOpen() && IsKeyPressed(KEY_I)) {
+            inventory.Toggle();
+        }
+        if (canOpenMenu && !inventory.IsOpen() && IsKeyPressed(KEY_Q)) {
+            questLog.Toggle();
         }
         
         if (isShopOpen) {
+            for (int i = 0; i < 4; ++i) {
+                if (shopClickTimers[i] > 0.0f) {
+                    shopClickTimers[i] -= dt;
+                }
+            }
+
             Vector2 mousePos = GetMousePosition();
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                if (CheckCollisionPointRec(mousePos, item1)) {} 
-                else if (CheckCollisionPointRec(mousePos, item2)) {}
-                else if (CheckCollisionPointRec(mousePos, item3)) {}
-                else if (CheckCollisionPointRec(mousePos, item4)) {}
+                if (CheckCollisionPointRec(mousePos, item1)) {
+                    inventory.AddItem(Item("Whey Protein", ItemType::CONSUMABLE, manager.getWheyTexture(), 25, 1));
+                    questLog.AdvanceQuest("protein_up", 1);
+                    shopClickTimers[0] = 0.5f;
+                }
+                else if (CheckCollisionPointRec(mousePos, item2)) {
+                    inventory.AddItem(Item("Creatine", ItemType::CONSUMABLE, manager.getCreatineTexture(), 15, 1));
+                    questLog.AdvanceQuest("protein_up", 1);
+                    shopClickTimers[1] = 0.5f;
+                }
+                else if (CheckCollisionPointRec(mousePos, item3)) {
+                    inventory.AddItem(Item("Testo", ItemType::BOOSTER, manager.getTestoTexture(), 25, 1));
+                    shopClickTimers[2] = 0.5f;
+                }
+                else if (CheckCollisionPointRec(mousePos, item4)) {
+                    inventory.AddItem(Item("Supplements", ItemType::CONSUMABLE, manager.getSupplementsTexture(), 20, 1));
+                    shopClickTimers[3] = 0.5f;
+                }
             }
 
             if (IsKeyPressed(KEY_ESCAPE)) {
                 shopButton.setIsTalking(false);
+            }
+        }
+        else if (inventory.IsOpen()) {
+            std::string cmd = inventory.Update(GetMousePosition(), playerHP, bonusDamage);
+            if (!cmd.empty()) {
+                // Plus tard : sendToServer(cmd);
+            }
+        }
+        else if (questLog.IsOpen()) {
+            std::string cmd = questLog.Update(GetMousePosition());
+            if (!cmd.empty()) {
+                // Plus tard : sendToServer(cmd);
+            }
+        }
+        else if (isExercising)
+        {
+            exerciseDurationTimer += dt;
+            exerciseSwapTimer += dt;
+
+            if (exerciseSwapTimer >= 0.5f) {
+                exerciseSwapTimer -= 0.5f;
+                exerciseFrame = 1 - exerciseFrame;
+            }
+
+            if (exerciseDurationTimer >= 6.0f) {
+                questLog.AdvanceQuest(pendingQuestId, 1);
+                activeExercise = ExerciseType::NONE;
+                pendingQuestId = "";
             }
         }
         else if (isFighting)
@@ -183,7 +340,7 @@ int main(void)
                         int key = GetKeyPressed();
                         if (key != 0) {
                             if (key == qteKey) {
-                                npcHP -= 35;
+                                npcHP -= (35 + bonusDamage);
                                 qteKey = 1;
                             } else {
                                 qteKey = 0;
@@ -199,7 +356,10 @@ int main(void)
                     else { pFrame = 0; nFrame = 3; }
                     
                     if (fightTimer <= 0) {
-                        if (npcHP <= 0) fState = FightState::END;
+                        if (npcHP <= 0) {
+                            fState = FightState::END;
+                            questLog.AdvanceQuest("heavy_weight", 1);
+                        }
                         else { fightTimer = 1.0f; fState = FightState::NPC_WAIT; }
                     }
                     break;
@@ -235,7 +395,9 @@ int main(void)
         }
         else 
         {
-            if (!npcButton.getIsTalking())
+            bool isTalkingAny = npcButton.getIsTalking();
+
+            if (!isTalkingAny)
             {
                 if (IsKeyDown(KEY_RIGHT)) {
                     Rectangle future_feet = get_feet_hitbox(destRec.x + speed, destRec.y);
@@ -279,32 +441,79 @@ int main(void)
                 }
             }
         }
-
         switch (currentRoom)
         {
             case Rooms::Reception:
                 if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
                     currentRoom = Rooms::LockerRoom; destRec.x = 1650; destRec.y = 270;
-                } else if (destRec.y < 160 && destRec.x > 900 && destRec.x < 1070) {
-                    currentRoom = Rooms::Muscu; destRec.y = screenHeight - 180;
                 }
-                break;
-            case Rooms::LockerRoom:
-                if (destRec.x > 1640 && destRec.x < 1764 && destRec.y < 100) {
-                    currentRoom = Rooms::Reception; destRec.x = 155; destRec.y = 200;
-                }
-                break;
-            case Rooms::Muscu:
-                if (destRec.y > screenHeight - 172) {
-                    currentRoom = Rooms::Reception; destRec.y = 180;
-                } else if (destRec.x < 10) {
-                    currentRoom = Rooms::Cardio; destRec.x = screenWidth - 52;
-                }
-                break;
-            case Rooms::Cardio:
-                if (destRec.x > screenWidth - 51) {
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
                     currentRoom = Rooms::Muscu; destRec.x = 5;
                 }
+                scale = 0.6f;
+                break;
+            case Rooms::LockerRoom:
+                if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
+                    currentRoom = Rooms::Pool; destRec.x = 1650; destRec.y = 270;
+                }
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
+                    currentRoom = Rooms::Reception; destRec.x = 220; destRec.y = 250;
+                }
+                scale = 0.6f;
+                break;
+            case Rooms::Pool:
+                if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
+                    currentRoom = Rooms::Climbing; destRec.x = 1650; destRec.y = 270;
+                }
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
+                    currentRoom = Rooms::LockerRoom; destRec.x = 5;
+                }
+                scale = 0.6f;
+                break;
+            case Rooms::Climbing:
+                if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
+                    currentRoom = Rooms::Sauna; destRec.x = 1650; destRec.y = 270;
+                }
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
+                    currentRoom = Rooms::Pool; destRec.x = 250; destRec.y = 180;
+                }
+                scale = 0.6f;
+                break;
+            case Rooms::Sauna:
+                if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
+                    currentRoom = Rooms::Masage; destRec.x = 1650; destRec.y = 270;
+                }
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
+                    currentRoom = Rooms::Climbing; destRec.x = 5;
+                }
+                scale = 0.8f;
+                break;
+            case Rooms::Masage:
+                if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
+                    currentRoom = Rooms::Cardio; destRec.x = 1650; destRec.y = 270;
+                }
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
+                    currentRoom = Rooms::Sauna; destRec.x = 5;
+                }
+                scale = 0.8f;
+                break;
+            case Rooms::Cardio:
+                if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
+                    currentRoom = Rooms::Muscu; destRec.x = 1650; destRec.y = 270;
+                }
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
+                    currentRoom = Rooms::Masage; destRec.x = 5;
+                }
+                scale = 0.6f;
+                break;
+            case Rooms::Muscu:
+                if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
+                    currentRoom = Rooms::Reception; destRec.x = 1650; destRec.y = 270;
+                }
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
+                    currentRoom = Rooms::Cardio; destRec.x = 5;
+                }
+                scale = 0.6f;
                 break;
         }
 
@@ -339,17 +548,35 @@ int main(void)
                 DrawText("Muscu", screenWidth/2, screenHeight/2, 50, BLACK);
                 Muscu.draw();
                 fightButton.Draw(buttonsTexture, bframeWidth, bframeHeight, cropOffset);
+                pressButton.Draw(buttonsTexture, bframeWidth, bframeHeight, cropOffset);
+                benchButton.Draw(buttonsTexture, bframeWidth, bframeHeight, cropOffset);
                 break;
             case Rooms::Cardio:
                 DrawText("Cardio", screenWidth/2, screenHeight/2, 50, BLACK);
                 Cardio.draw();
+                bikeButton.Draw(buttonsTexture, bframeWidth, bframeHeight, cropOffset);
+                treadmillButton.Draw(buttonsTexture, bframeWidth, bframeHeight, cropOffset);
+                break;
+            case Rooms::Climbing:
+                Climbing.draw();
+                break;
+            case Rooms::Pool:
+                Pool.draw();
+                break;
+            case Rooms::Sauna:
+                Sauna.draw();
+                break;
+            case Rooms::Masage:
+                Masage.draw();
                 break;
         }
         
         DrawText(TextFormat("X: %d Y: %d", GetMouseX(), GetMouseY()), 10, 10, 20, WHITE);
         
-        DrawTexturePro(current_guy, frameRec, destRec, origin, 0.0f, WHITE);
-        DrawRectangleLinesEx(playerHitbox, 2.0f, RED);
+        if (!isExercising) {
+            DrawTexturePro(current_guy, frameRec, destRec, origin, 0.0f, WHITE);
+            DrawRectangleLinesEx(playerHitbox, 2.0f, RED);
+        }
 
         if (isShopOpen) {
             DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.5f));
@@ -361,11 +588,44 @@ int main(void)
             
             DrawTextureEx(shopTexture, shopPos, 0.0f, shopScale, WHITE);
 
-            Vector2 mousePos = GetMousePosition();
-            DrawRectangleLinesEx(item1, 2.0f, CheckCollisionPointRec(mousePos, item1) ? RED : WHITE);
-            DrawRectangleLinesEx(item2, 2.0f, CheckCollisionPointRec(mousePos, item2) ? RED : WHITE);
-            DrawRectangleLinesEx(item3, 2.0f, CheckCollisionPointRec(mousePos, item3) ? RED : WHITE);
-            DrawRectangleLinesEx(item4, 2.0f, CheckCollisionPointRec(mousePos, item4) ? RED : WHITE);
+            DrawRectangleLinesEx(item1, 2.0f, shopClickTimers[0] > 0.0f ? RED : WHITE);
+            DrawRectangleLinesEx(item2, 2.0f, shopClickTimers[1] > 0.0f ? RED : WHITE);
+            DrawRectangleLinesEx(item3, 2.0f, shopClickTimers[2] > 0.0f ? RED : WHITE);
+            DrawRectangleLinesEx(item4, 2.0f, shopClickTimers[3] > 0.0f ? RED : WHITE);
+        }
+        else if (isExercising)
+        {
+            DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.7f));
+
+            Texture2D activeTex = benchPositionsTexture;
+            const char* label = "BENCH PRESS";
+            if (activeExercise == ExerciseType::SQUATS) {
+                activeTex = squatsPositionsTexture;
+                label = "SQUATS / LEG PRESS";
+            } else if (activeExercise == ExerciseType::SPRINT) {
+                activeTex = sprintPositionsTexture;
+                label = "CARDIO SPRINT";
+            }
+
+            float exFrameW = activeTex.width / 2.0f;
+            float exFrameH = (float)activeTex.height;
+            float exScale = 1.5f;
+
+            Rectangle exSrc = { exerciseFrame * exFrameW, 0.0f, exFrameW, exFrameH };
+            Rectangle exDest = {
+                (screenWidth / 2.0f) - ((exFrameW * exScale) / 2.0f),
+                (screenHeight / 2.0f) - ((exFrameH * exScale) / 2.0f),
+                exFrameW * exScale,
+                exFrameH * exScale
+            };
+
+            DrawTexturePro(activeTex, exSrc, exDest, {0.0f, 0.0f}, 0.0f, WHITE);
+
+            DrawText(label, screenWidth / 2 - MeasureText(label, 30) / 2, 80, 30, YELLOW);
+            float progress = exerciseDurationTimer / 6.0f;
+            DrawRectangle(screenWidth / 2 - 150, screenHeight - 100, 300, 20, DARKGRAY);
+            DrawRectangle(screenWidth / 2 - 150, screenHeight - 100, (int)(300 * progress), 20, GREEN);
+            DrawRectangleLines(screenWidth / 2 - 150, screenHeight - 100, 300, 20, WHITE);
         }
         else if (isFighting)
         {
@@ -403,13 +663,16 @@ int main(void)
             } else if (fState == FightState::END) {
                 if (playerHP > 0) DrawText("YOU WIN!", screenWidth/2 - 100, screenHeight/2 - 100, 50, GREEN);
                 else DrawText("YOU LOSE!", screenWidth/2 - 110, screenHeight/2 - 100, 50, RED);
-                DrawText("Press E to exit", screenWidth/2 - 90, screenHeight/2, 20, WHITE);
+                DrawText("Press ENTER or ESC to exit", screenWidth/2 - 140, screenHeight/2, 20, WHITE);
             }
         }
         else {
             npcButton.DrawDialog(screenWidth, screenHeight);
         }
 
+        questLog.DrawTracker(screenWidth);
+        inventory.Draw(screenWidth, screenHeight);
+        questLog.DrawJournal(screenWidth, screenHeight);
         EndDrawing();
     }
     
