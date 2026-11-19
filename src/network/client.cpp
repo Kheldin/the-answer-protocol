@@ -17,8 +17,7 @@ int main(void) {
   ssize_t check = ::recv(clientSocket, buffer, sizeof(buffer), 0);
   std::string command{buffer, (size_t)check};
   std::print("response: {}", command);
-  const char *message = "CONNECT mappelle pierre \njaime les animaux surout "
-                        "les chats et jai rien a dire sa mere";
+  const char *message = "CONNECT Pier\\ui\n";
   send(clientSocket, message, strlen(message), 0);
   check = ::recv(clientSocket, buffer, sizeof(buffer), 0);
   std::string command2{buffer, (size_t)check};
