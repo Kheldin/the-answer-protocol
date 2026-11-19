@@ -58,8 +58,9 @@ Server::~Server() {
   errno = 0;
   for (pollfd sock : clients_poll) {
     if (close(sock.fd) == -1) {
-      std::println("An error happended when closing fd {}.", sock.fd);
-      std::println("{}", strerror(errno));
+      std::println(std::cerr, "An error happended when closing fd {}.",
+                   sock.fd);
+      std::println(std::cerr, "{}", strerror(errno));
     }
   }
 }
