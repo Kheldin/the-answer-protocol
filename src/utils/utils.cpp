@@ -1,5 +1,5 @@
 #include <string_view>
-bool has_whitespace(std::string_view &s) {
+bool has_whitespace(std::string_view s) {
   if (s.find_first_of(" \n\t\r\v\f") != std::string_view::npos) {
     return (true);
   }
