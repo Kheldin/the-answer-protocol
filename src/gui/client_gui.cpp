@@ -50,24 +50,28 @@ int main(void)
     Room LockerRoom(manager.getLockerRoomTextures(), manager.getLockerRoomTexturesPositions(), manager.getLockerRoomHitboxes());
     Room Muscu(manager.getMuscuTextures(), manager.getMuscuTexturesPositions(), manager.getMuscuHitboxes());
     Room Cardio(manager.getCardioTextures(), manager.getCardioTexturesPositions(), manager.getCardioHitboxes());
+    Room Pool(manager.getPoolTexture(), manager.getCardioTexturesPositions(), manager.getCardioHitboxes());
+    Room Climbing(manager.getClimbingTexture(), manager.getCardioTexturesPositions(), manager.getCardioHitboxes());
+    Room Sauna(manager.getSaunaTexture(), manager.getCardioTexturesPositions(), manager.getCardioHitboxes());
+    Room Masage(manager.getMasageTexture(), manager.getCardioTexturesPositions(), manager.getCardioHitboxes());
 
     // --- BOUTONS MUSCU ---
     Rectangle posPress = { 900.0f, 350.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
     Rectangle zonePress = { posPress.x - 250, posPress.y + 100, posPress.width + 310, posPress.height + 60 };
-    InteractiveButton pressButton(posPress, zonePress, "Leg Press: +10 Leg Gains!\nQuest updated.");
+    InteractiveButton pressButton(posPress, zonePress, "");
 
     Rectangle posBench = { 1350.0f, 450.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
     Rectangle zoneBench = { posBench.x - 250, posBench.y + 100, posBench.width + 310, posBench.height + 60 };
-    InteractiveButton benchButton(posBench, zoneBench, "Bench Press: +10 Chest Gains!\nQuest updated.");
+    InteractiveButton benchButton(posBench, zoneBench, "");
 
     // --- BOUTONS CARDIO ---
     Rectangle posBike = { 500.0f, 400.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
     Rectangle zoneBike = { posBike.x - 250, posBike.y + 100, posBike.width + 310, posBike.height + 60 };
-    InteractiveButton bikeButton(posBike, zoneBike, "Exercise Bike: 15 min cardio done!\nQuest updated.");
+    InteractiveButton bikeButton(posBike, zoneBike, "");
 
     Rectangle posTreadmill = { 1100.0f, 400.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
     Rectangle zoneTreadmill = { posTreadmill.x - 250, posTreadmill.y + 100, posTreadmill.width + 310, posTreadmill.height + 60 };
-    InteractiveButton treadmillButton(posTreadmill, zoneTreadmill, "Treadmill: 3 km run completed!\nQuest updated.");
+    InteractiveButton treadmillButton(posTreadmill, zoneTreadmill, "");
 
     // --- VARIABLES SHOP ---
     Texture2D shopTexture = manager.getShopTexture(); 
@@ -103,7 +107,7 @@ int main(void)
     SetTextureFilter(rightFightTexture, TEXTURE_FILTER_POINT);
     
     float fightBgScale = 1.5f;
-    float spriteScale = 1.0f;
+    float spriteScale = 0.8f;
     bool isFighting = false;
     bool wasFighting = false;
 
@@ -119,7 +123,7 @@ int main(void)
     Inventory inventory(manager);
     QuestLog questLog;
 
-    enum class Rooms { Reception, LockerRoom, Muscu, Cardio };
+    enum class Rooms { Reception, LockerRoom, Muscu, Cardio, Pool, Climbing, Sauna, Masage };
     Rooms currentRoom {Rooms::Reception};
     
     const float HITBOX_OFFSET_X = 5.0f;
@@ -137,7 +141,7 @@ int main(void)
     Rectangle frameRec = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     const float speed = 15.0f;
-    const float scale = 0.6f;
+    float scale = 0.6f;
 
     Rectangle destRec = {
         screenWidth / 2.0f,
@@ -160,6 +164,11 @@ int main(void)
         bool inReception = (currentRoom == Rooms::Reception);
         bool inMuscu = (currentRoom == Rooms::Muscu);
         bool inCardio = (currentRoom == Rooms::Cardio);
+        // bool inSauna = (currentRoom == Rooms::Sauna);
+        // bool inClimbing = (currentRoom == Rooms::Climbing);
+        // bool inMasage = (currentRoom == Rooms::Masage);
+        // bool inPool = (currentRoom == Rooms::Pool);
+        // bool inLockerRoom = (currentRoom == Rooms::LockerRoom);
 
         npcButton.Update(playerHitbox, inReception);
         shopButton.Update(playerHitbox, inReception);
@@ -231,7 +240,11 @@ int main(void)
             case Rooms::Reception:  current_hitboxes = Reception.getHitboxes(); break;
             case Rooms::LockerRoom: current_hitboxes = LockerRoom.getHitboxes(); break;
             case Rooms::Muscu:      current_hitboxes = Muscu.getHitboxes(); break;
-            case Rooms::Cardio:     current_hitboxes = Cardio.getHitboxes(); break;
+            case Rooms::Cardio: current_hitboxes = Cardio.getHitboxes(); break;
+            case Rooms::Pool: current_hitboxes = Cardio.getHitboxes(); break;
+            case Rooms::Climbing: current_hitboxes = Cardio.getHitboxes(); break;
+            case Rooms::Sauna: current_hitboxes = Cardio.getHitboxes(); break;
+            case Rooms::Masage:     current_hitboxes = Cardio.getHitboxes(); break;
         }
 
         bool isExercising = (activeExercise != ExerciseType::NONE);
@@ -291,13 +304,12 @@ int main(void)
         }
         else if (isExercising)
         {
-            // --- LOGIQUE ANIMATION EXERCICE (6 SECONDES, ALTERNANCE 0.5s) ---
             exerciseDurationTimer += dt;
             exerciseSwapTimer += dt;
 
             if (exerciseSwapTimer >= 0.5f) {
                 exerciseSwapTimer -= 0.5f;
-                exerciseFrame = 1 - exerciseFrame; // Alterne entre 0 et 1
+                exerciseFrame = 1 - exerciseFrame;
             }
 
             if (exerciseDurationTimer >= 6.0f) {
@@ -429,32 +441,79 @@ int main(void)
                 }
             }
         }
-
         switch (currentRoom)
         {
             case Rooms::Reception:
                 if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
                     currentRoom = Rooms::LockerRoom; destRec.x = 1650; destRec.y = 270;
-                } else if (destRec.y < 160 && destRec.x > 900 && destRec.x < 1070) {
-                    currentRoom = Rooms::Muscu; destRec.y = screenHeight - 180;
                 }
-                break;
-            case Rooms::LockerRoom:
-                if (destRec.x > 1640 && destRec.x < 1764 && destRec.y < 100) {
-                    currentRoom = Rooms::Reception; destRec.x = 155; destRec.y = 200;
-                }
-                break;
-            case Rooms::Muscu:
-                if (destRec.y > screenHeight - 172) {
-                    currentRoom = Rooms::Reception; destRec.y = 180;
-                } else if (destRec.x < 10) {
-                    currentRoom = Rooms::Cardio; destRec.x = screenWidth - 52;
-                }
-                break;
-            case Rooms::Cardio:
-                if (destRec.x > screenWidth - 51) {
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
                     currentRoom = Rooms::Muscu; destRec.x = 5;
                 }
+                scale = 0.6f;
+                break;
+            case Rooms::LockerRoom:
+                if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
+                    currentRoom = Rooms::Pool; destRec.x = 1650; destRec.y = 270;
+                }
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
+                    currentRoom = Rooms::Reception; destRec.x = 220; destRec.y = 250;
+                }
+                scale = 0.6f;
+                break;
+            case Rooms::Pool:
+                if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
+                    currentRoom = Rooms::Climbing; destRec.x = 1650; destRec.y = 270;
+                }
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
+                    currentRoom = Rooms::LockerRoom; destRec.x = 5;
+                }
+                scale = 0.6f;
+                break;
+            case Rooms::Climbing:
+                if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
+                    currentRoom = Rooms::Sauna; destRec.x = 1650; destRec.y = 270;
+                }
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
+                    currentRoom = Rooms::Pool; destRec.x = 250; destRec.y = 180;
+                }
+                scale = 0.6f;
+                break;
+            case Rooms::Sauna:
+                if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
+                    currentRoom = Rooms::Masage; destRec.x = 1650; destRec.y = 270;
+                }
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
+                    currentRoom = Rooms::Climbing; destRec.x = 5;
+                }
+                scale = 0.8f;
+                break;
+            case Rooms::Masage:
+                if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
+                    currentRoom = Rooms::Cardio; destRec.x = 1650; destRec.y = 270;
+                }
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
+                    currentRoom = Rooms::Sauna; destRec.x = 5;
+                }
+                scale = 0.8f;
+                break;
+            case Rooms::Cardio:
+                if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
+                    currentRoom = Rooms::Muscu; destRec.x = 1650; destRec.y = 270;
+                }
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
+                    currentRoom = Rooms::Masage; destRec.x = 5;
+                }
+                scale = 0.6f;
+                break;
+            case Rooms::Muscu:
+                if (destRec.y < 160 && destRec.x > 150 && destRec.x < 270) {
+                    currentRoom = Rooms::Reception; destRec.x = 1650; destRec.y = 270;
+                }
+                if (destRec.y < 160 && destRec.x > 1650 && destRec.x < 1850) {
+                    currentRoom = Rooms::Cardio; destRec.x = 5;
+                }
+                scale = 0.6f;
                 break;
         }
 
@@ -498,11 +557,22 @@ int main(void)
                 bikeButton.Draw(buttonsTexture, bframeWidth, bframeHeight, cropOffset);
                 treadmillButton.Draw(buttonsTexture, bframeWidth, bframeHeight, cropOffset);
                 break;
+            case Rooms::Climbing:
+                Climbing.draw();
+                break;
+            case Rooms::Pool:
+                Pool.draw();
+                break;
+            case Rooms::Sauna:
+                Sauna.draw();
+                break;
+            case Rooms::Masage:
+                Masage.draw();
+                break;
         }
         
         DrawText(TextFormat("X: %d Y: %d", GetMouseX(), GetMouseY()), 10, 10, 20, WHITE);
         
-        // On ne dessine pas le personnage normal s'il est en train de faire un exercice
         if (!isExercising) {
             DrawTexturePro(current_guy, frameRec, destRec, origin, 0.0f, WHITE);
             DrawRectangleLinesEx(playerHitbox, 2.0f, RED);
@@ -525,7 +595,6 @@ int main(void)
         }
         else if (isExercising)
         {
-            // --- AFFICHAGE DE L'ANIMATION D'EXERCICE ---
             DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.7f));
 
             Texture2D activeTex = benchPositionsTexture;
@@ -538,10 +607,9 @@ int main(void)
                 label = "CARDIO SPRINT";
             }
 
-            // Découpage en 2 frames côte à côte (horizontal)
             float exFrameW = activeTex.width / 2.0f;
             float exFrameH = (float)activeTex.height;
-            float exScale = 1.5f; // Ajuste l'échelle selon la taille réelle de tes PNG
+            float exScale = 1.5f;
 
             Rectangle exSrc = { exerciseFrame * exFrameW, 0.0f, exFrameW, exFrameH };
             Rectangle exDest = {
@@ -553,7 +621,6 @@ int main(void)
 
             DrawTexturePro(activeTex, exSrc, exDest, {0.0f, 0.0f}, 0.0f, WHITE);
 
-            // Titre + barre de progression des 6 secondes
             DrawText(label, screenWidth / 2 - MeasureText(label, 30) / 2, 80, 30, YELLOW);
             float progress = exerciseDurationTimer / 6.0f;
             DrawRectangle(screenWidth / 2 - 150, screenHeight - 100, 300, 20, DARKGRAY);
@@ -601,10 +668,6 @@ int main(void)
         }
         else {
             npcButton.DrawDialog(screenWidth, screenHeight);
-            pressButton.DrawDialog(screenWidth, screenHeight);
-            benchButton.DrawDialog(screenWidth, screenHeight);
-            bikeButton.DrawDialog(screenWidth, screenHeight);
-            treadmillButton.DrawDialog(screenWidth, screenHeight);
         }
 
         questLog.DrawTracker(screenWidth);

@@ -9,7 +9,7 @@ void AssetManager::LoadAll()
     player_textures["guy_right1"] = LoadTexture("src/gui/assets/normal/walk_right1.png");
     player_textures["guy_right2"] = LoadTexture("src/gui/assets/normal/walk_right2.png");
     player_textures["guy_right3"] = LoadTexture("src/gui/assets/normal/walk_right3.png");
-    
+
     player_textures["guy_front"] = LoadTexture("src/gui/assets/normal/normal_front.png");
     player_textures["guy_back"]  = LoadTexture("src/gui/assets/normal/normal_back.png");
 
@@ -17,6 +17,10 @@ void AssetManager::LoadAll()
     lockerroom_textures["background"] = LoadTexture("src/gui/assets/background/lockerroom.png");
     muscu_textures["background"] = LoadTexture("src/gui/assets/background/muscu.png");
     cardio_textures["background"] = LoadTexture("src/gui/assets/background/cardio.png");
+    poolTexture["background"] = LoadTexture("src/gui/assets/background/pool.png");
+    climbingTexture["background"] = LoadTexture("src/gui/assets/background/climbing.png");
+    saunaTexture["background"] = LoadTexture("src/gui/assets/background/sauna.png");
+    masageTexture["background"] = LoadTexture("src/gui/assets/background/masage.png");
 
     shop_texture = LoadTexture("src/gui/assets/shop.png");
     fightTexture = LoadTexture("src/gui/assets/background/fight_background.png");

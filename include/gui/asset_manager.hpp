@@ -42,6 +42,12 @@ public:
     Texture2D getbenchPositionsTexture() { return benchPositionsTexture; }
     Texture2D getsquatsPositionsTexture() { return squatsPositionsTexture; }
     Texture2D getsprintPositionsTexture() { return sprintPositionsTexture; }
+    
+    std::unordered_map<std::string, Texture2D> getPoolTexture() { return poolTexture; }
+    std::unordered_map<std::string, Texture2D> getClimbingTexture() { return climbingTexture; }
+    
+    std::unordered_map<std::string, Texture2D> getSaunaTexture() { return saunaTexture; }
+    std::unordered_map<std::string, Texture2D> getMasageTexture() { return masageTexture; }
 
 private:
     std::unordered_map<std::string, Texture2D> player_textures {};
@@ -60,6 +66,12 @@ private:
     Texture2D testoTexture {};
     Texture2D supplementsTexture {};
     Texture2D creatineTexture {};
+    
+    std::unordered_map<std::string, Texture2D> poolTexture {};
+    std::unordered_map<std::string, Texture2D> climbingTexture {};
+    
+    std::unordered_map<std::string, Texture2D> saunaTexture {};
+    std::unordered_map<std::string, Texture2D> masageTexture {};
 
     std::unordered_map<std::string, Texture2D> reception_textures {};
     std::unordered_map<std::string, Vector2> reception_tpositions {};
