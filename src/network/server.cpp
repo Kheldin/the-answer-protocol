@@ -19,8 +19,8 @@
 #include <system_error>
 #include <unistd.h>
 
-static constexpr std::array<std::string_view, 4> COMMANDS{"CONNECT", "LOOK",
-                                                          "QUIT", "WHO"};
+static constexpr std::array<std::string_view, 5> COMMANDS{
+    "CONNECT", "LOOK", "QUIT", "WHO", "GROUP"};
 std::atomic<bool> is_running{false};
 Server::Server() {
   // AF_INET: IPv4 protocol

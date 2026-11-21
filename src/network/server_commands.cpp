@@ -15,6 +15,8 @@ void Server::dispatch_command(Client &client, Command &command) {
     quit(client, command);
   } else if (command.type == "WHO") {
     who(client, command);
+  } else if (command.type == "GROUP") {
+    group(client, command);
   }
   return;
 }
