@@ -2,7 +2,6 @@
 #include "utils/logger.hpp"
 #include "utils/utils.hpp"
 #include <cctype>
-#include <print>
 #include <string_view>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -50,12 +49,13 @@ void Server::connect(Client &client, Command &command) {
   client.player.username = command.payload;
   ::send(client.fd, connected.data(), connected.size(),
          MSG_DONTWAIT | MSG_NOSIGNAL);
-  logger.log(LogLevel::Info, "{}", connected);
+  logger.log(LogLevel::Info, "Player {}: {}", client.player.username,
+             connected);
   client.state = ConState::Authenticated;
 }
 
 void Server::quit(Client &client) {
   static constexpr std::string_view bye{"OK bye"};
   ::send(client.fd, bye.data(), bye.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
-  logger.log(LogLevel::Info, "File descriptor {}: {}", client.fd, bye);
+  logger.log(LogLevel::Info, "Player {}: {}", client.player.username, bye);
 }
