@@ -18,8 +18,8 @@
 #include <system_error>
 #include <unistd.h>
 
-static constexpr std::array<std::string_view, 8> COMMANDS{"CONNECT", "LOOK",
-                                                          "QUIT"};
+static constexpr std::array<std::string_view, 4> COMMANDS{"CONNECT", "LOOK",
+                                                          "QUIT", "WHO"};
 std::atomic<bool> is_running{false};
 Server::Server() {
   // AF_INET: IPv4 protocol
@@ -104,8 +104,11 @@ void Server::accept_new_client() {
 std::string_view Command::extract_command_type(std::string_view buffer) {
   size_t index{buffer.find_first_of(' ')};
   int i{0};
-  for (std::string_view str : COMMANDS) {
-    if (str == buffer.substr(0, index)) {
+  if (index == std::string::npos) {
+    index = buffer.size() - 1;
+  }
+  for (std::string_view command : COMMANDS) {
+    if (command == buffer.substr(0, index)) {
       return (COMMANDS[i]);
     }
     i++;
@@ -115,6 +118,9 @@ std::string_view Command::extract_command_type(std::string_view buffer) {
 
 std::string_view Command::extract_command_payload(std::string_view buffer) {
   size_t index{buffer.find_first_of(' ')};
+  if (index == std::string::npos) {
+    return ("");
+  }
   return (buffer.substr(index + 1, buffer.find_first_of('\n') - index - 1));
 }
 
@@ -124,6 +130,13 @@ void Server::send_unknown_command(Client &client) {
   ::send(client.fd, unknown_command.data(), unknown_command.size(),
          MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Warning, "{}", unknown_command);
+
+  // Erase only the unknown_command from the buffer.
+  if (client.buffer.contains('\n')) {
+    client.buffer.erase(0, client.buffer.find_first_of('\n') + 1);
+    return;
+  }
+  // Erase the whole buffer if it's full without \n
   client.buffer.erase();
 }
 
@@ -137,16 +150,13 @@ void Server::process_msg(Client &client) {
     Command command{client.buffer};
     if (command.type == "unknown") {
       send_unknown_command(client);
-      return;
     }
-    if (has_whitespace(command.type) || has_whitespace(command.payload)) {
-      send_unknown_command(client);
-      return;
-    }
-
+    // if (!has_only_alpha(command.type)) {
+    //   send_unknown_command(client);
+    //   return;
+    // }
     dispatch_command(client, command);
     client.buffer.erase(0, client.buffer.find_first_of('\n') + 1);
-    return;
   }
   // If there is no authorized command in the buffer:
   // If the buffer is full, send err msg to client
@@ -158,6 +168,8 @@ void Server::process_msg(Client &client) {
       send_unknown_command(client);
     }
   }
+  logger.log(LogLevel::Debug, "Buffer of client after process last msg: {}",
+             client.buffer);
   return;
 }
 
