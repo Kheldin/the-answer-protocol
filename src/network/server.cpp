@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <iostream>
 #include <netinet/in.h>
 #include <poll.h>
@@ -274,8 +275,13 @@ int main(void) {
     std::cerr << "sigaction error" << "\n";
     return (EXIT_FAILURE);
   }
-  Server server{};
-  server.start_listening();
-  server.run();
-  return (EXIT_SUCCESS);
+  try {
+    Server server{};
+    server.start_listening();
+    server.run();
+    return (EXIT_SUCCESS);
+  } catch (std::exception &e) {
+    std::println(std::cerr, "A standard exception was caught, with message: {}",
+                 e.what());
+  }
 }
