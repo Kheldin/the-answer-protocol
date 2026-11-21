@@ -70,5 +70,6 @@ private:
   void send_unknown_command(Client &client);
   void dispatch_command(Client &client, Command &command);
   void connect(Client &client, Command &command);
-  void quit(Client &client);
+  void quit(Client &client, Command &command);
+  void who(Client &client, Command &command);
 };

@@ -2,6 +2,8 @@
 #include "utils/logger.hpp"
 #include "utils/utils.hpp"
 #include <cctype>
+#include <print>
+#include <string>
 #include <string_view>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -11,7 +13,10 @@ void Server::dispatch_command(Client &client, Command &command) {
     connect(client, command);
   } else if (command.type == "QUIT") {
     quit(client);
+  } else if (command.type == "WHO") {
+    who(client, command);
   }
+  return;
 }
 
 void Server::connect(Client &client, Command &command) {
@@ -54,8 +59,21 @@ void Server::connect(Client &client, Command &command) {
   client.state = ConState::Authenticated;
 }
 
-void Server::quit(Client &client) {
+void Server::quit(Client &client, Command &command) {
+  if (!command.payload.empty()) {
+    send_unknown_command(client);
+  }
   static constexpr std::string_view bye{"OK bye"};
   ::send(client.fd, bye.data(), bye.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Info, "Player {}: {}", client.player.username, bye);
+}
+
+void Server::who(Client &client, Command &command) {
+  if (!command.payload.empty()) {
+    send_unknown_command(client);
+  }
+  std::string res{"OK players="};
+  res += std::to_string(clients.size() - 1);
+  ::send(client.fd, res.data(), res.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
+  logger.log(LogLevel::Info, "Player {}: {}", client.player.username, res);
 }
