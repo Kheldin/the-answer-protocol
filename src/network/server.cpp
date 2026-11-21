@@ -131,8 +131,12 @@ void Server::send_unknown_command(Client &client) {
          MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Warning, "{}", unknown_command);
 
-  // Erase jusquau \n si yen a un sinon tout le buffer si la fonction a ete call
-  // a cause dun buffer plein sans \n
+  // Erase only the unknown_command from the buffer.
+  if (client.buffer.contains('\n')) {
+    client.buffer.erase(0, client.buffer.find_first_of('\n') + 1);
+    return;
+  }
+  // Erase the whole buffer if it's full without \n
   client.buffer.erase();
 }
 

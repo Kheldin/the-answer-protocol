@@ -12,7 +12,7 @@ void Server::dispatch_command(Client &client, Command &command) {
   if (command.type == "CONNECT") {
     connect(client, command);
   } else if (command.type == "QUIT") {
-    quit(client);
+    quit(client, command);
   } else if (command.type == "WHO") {
     who(client, command);
   }
@@ -71,6 +71,7 @@ void Server::quit(Client &client, Command &command) {
 void Server::who(Client &client, Command &command) {
   if (!command.payload.empty()) {
     send_unknown_command(client);
+    return;
   }
   std::string res{"OK players="};
   res += std::to_string(clients.size() - 1);
