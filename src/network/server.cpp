@@ -1,5 +1,6 @@
 #include "network/network.hpp"
 #include "utils/logger.hpp"
+#include "utils/utils.hpp"
 #include <atomic>
 #include <cerrno>
 #include <csignal>
@@ -57,8 +58,9 @@ Server::~Server() {
   errno = 0;
   for (pollfd sock : clients_poll) {
     if (close(sock.fd) == -1) {
-      std::println("An error happended when closing fd {}.", sock.fd);
-      std::println("{}", strerror(errno));
+      std::println(std::cerr, "An error happended when closing fd {}.",
+                   sock.fd);
+      std::println(std::cerr, "{}", strerror(errno));
     }
   }
 }
@@ -111,7 +113,7 @@ std::string_view Command::extract_command_type(std::string_view buffer) {
   return "unknown";
 }
 
-std::string_view Command::extract_command_content(std::string_view buffer) {
+std::string_view Command::extract_command_payload(std::string_view buffer) {
   size_t index{buffer.find_first_of(' ')};
   return (buffer.substr(index + 1, buffer.find_first_of('\n') - index - 1));
 }
@@ -125,9 +127,7 @@ void Server::send_unknown_command(Client &client) {
   client.buffer.erase();
 }
 
-bool Server::process_msg(Client &client) {
-  // logger.log(LogLevel::Debug, "Buffer cap = {}\n buffer size = {}",
-  //            client.buffer.capacity(), client.buffer.size());
+void Server::process_msg(Client &client) {
   if (client.buffer.contains(
           "\n")) { // will be a while when we remove the command
     // Check if the commands until the first \n is authorized and if its the
@@ -135,11 +135,18 @@ bool Server::process_msg(Client &client) {
     // And remove the command from the buffer.
     // And do this WHILE there is \n in the buffer.
     Command command{client.buffer};
-    // logger.log(LogLevel::Debug, "type = {}", command.type);
-    // logger.log(LogLevel::Debug, "content = {}", command.content);
+    if (command.type == "unknown") {
+      send_unknown_command(client);
+      return;
+    }
+    if (has_whitespace(command.type) || has_whitespace(command.payload)) {
+      send_unknown_command(client);
+      return;
+    }
+
     dispatch_command(client, command);
     client.buffer.erase(0, client.buffer.find_first_of('\n') + 1);
-    return (true);
+    return;
   }
   // If there is no authorized command in the buffer:
   // If the buffer is full, send err msg to client
@@ -151,9 +158,10 @@ bool Server::process_msg(Client &client) {
       send_unknown_command(client);
     }
   }
-  return (false);
+  return;
 }
 
+// Return false if the client terminated the connection
 bool Server::receive_msg(size_t i) {
   ssize_t check{0};
   char buffer[BUFFER_SIZE]{0};
@@ -161,25 +169,25 @@ bool Server::receive_msg(size_t i) {
   // Check contains the number of bytes received.
   errno = 0;
   check = ::recv(clients.at(i).fd, buffer, sizeof(buffer), MSG_DONTWAIT);
-
   if (check == 0) {
-    logger.log(LogLevel::Info, "Client {} disconnected properly.",
-               clients_poll[i].fd);
-    client.alive = false;
+    logger.log(LogLevel::Info, "Player {} disconnected properly.",
+               client.player.username);
+    client.state = ConState::Terminated;
+    return (false);
   } else if (check < 0) {
     // We have to check these errors even if check event with poll() because of
     // spurious wakeup
     if (errno == EWOULDBLOCK || errno == EAGAIN) {
-      return (client.alive);
+      return (true);
     }
     logger.log(LogLevel::Error, "Client: {}.", clients_poll[i].fd);
     logger.log(LogLevel::Error, "{}", std::strerror(errno));
-    client.alive = false;
+    return (false);
   } else {
     client.buffer.append(buffer, check);
     process_msg(clients.at(i));
   }
-  return (client.alive);
+  return (true);
 }
 
 void Server::run() {
