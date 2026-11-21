@@ -1,11 +1,13 @@
 #include "network/network.hpp"
 #include "utils/logger.hpp"
+#include "utils/utils.hpp"
 #include <atomic>
 #include <cerrno>
 #include <csignal>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <iostream>
 #include <netinet/in.h>
 #include <poll.h>
@@ -17,8 +19,8 @@
 #include <system_error>
 #include <unistd.h>
 
-static constexpr std::array<std::string_view, 8> COMMANDS{"CONNECT", "LOOK",
-                                                          "QUIT"};
+static constexpr std::array<std::string_view, 4> COMMANDS{"CONNECT", "LOOK",
+                                                          "QUIT", "WHO"};
 std::atomic<bool> is_running{false};
 Server::Server() {
   // AF_INET: IPv4 protocol
@@ -57,8 +59,9 @@ Server::~Server() {
   errno = 0;
   for (pollfd sock : clients_poll) {
     if (close(sock.fd) == -1) {
-      std::println("An error happended when closing fd {}.", sock.fd);
-      std::println("{}", strerror(errno));
+      std::println(std::cerr, "An error happended when closing fd {}.",
+                   sock.fd);
+      std::println(std::cerr, "{}", strerror(errno));
     }
   }
 }
@@ -102,8 +105,11 @@ void Server::accept_new_client() {
 std::string_view Command::extract_command_type(std::string_view buffer) {
   size_t index{buffer.find_first_of(' ')};
   int i{0};
-  for (std::string_view str : COMMANDS) {
-    if (str == buffer.substr(0, index)) {
+  if (index == std::string::npos) {
+    index = buffer.size() - 1;
+  }
+  for (std::string_view command : COMMANDS) {
+    if (command == buffer.substr(0, index)) {
       return (COMMANDS[i]);
     }
     i++;
@@ -111,8 +117,11 @@ std::string_view Command::extract_command_type(std::string_view buffer) {
   return "unknown";
 }
 
-std::string_view Command::extract_command_content(std::string_view buffer) {
+std::string_view Command::extract_command_payload(std::string_view buffer) {
   size_t index{buffer.find_first_of(' ')};
+  if (index == std::string::npos) {
+    return ("");
+  }
   return (buffer.substr(index + 1, buffer.find_first_of('\n') - index - 1));
 }
 
@@ -122,12 +131,17 @@ void Server::send_unknown_command(Client &client) {
   ::send(client.fd, unknown_command.data(), unknown_command.size(),
          MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Warning, "{}", unknown_command);
+
+  // Erase only the unknown_command from the buffer.
+  if (client.buffer.contains('\n')) {
+    client.buffer.erase(0, client.buffer.find_first_of('\n') + 1);
+    return;
+  }
+  // Erase the whole buffer if it's full without \n
   client.buffer.erase();
 }
 
-bool Server::process_msg(Client &client) {
-  // logger.log(LogLevel::Debug, "Buffer cap = {}\n buffer size = {}",
-  //            client.buffer.capacity(), client.buffer.size());
+void Server::process_msg(Client &client) {
   if (client.buffer.contains(
           "\n")) { // will be a while when we remove the command
     // Check if the commands until the first \n is authorized and if its the
@@ -135,11 +149,15 @@ bool Server::process_msg(Client &client) {
     // And remove the command from the buffer.
     // And do this WHILE there is \n in the buffer.
     Command command{client.buffer};
-    // logger.log(LogLevel::Debug, "type = {}", command.type);
-    // logger.log(LogLevel::Debug, "content = {}", command.content);
+    if (command.type == "unknown") {
+      send_unknown_command(client);
+    }
+    // if (!has_only_alpha(command.type)) {
+    //   send_unknown_command(client);
+    //   return;
+    // }
     dispatch_command(client, command);
     client.buffer.erase(0, client.buffer.find_first_of('\n') + 1);
-    return (true);
   }
   // If there is no authorized command in the buffer:
   // If the buffer is full, send err msg to client
@@ -151,9 +169,12 @@ bool Server::process_msg(Client &client) {
       send_unknown_command(client);
     }
   }
-  return (false);
+  logger.log(LogLevel::Debug, "Buffer of client after process last msg: {}",
+             client.buffer);
+  return;
 }
 
+// Return false if the client terminated the connection
 bool Server::receive_msg(size_t i) {
   ssize_t check{0};
   char buffer[BUFFER_SIZE]{0};
@@ -161,25 +182,25 @@ bool Server::receive_msg(size_t i) {
   // Check contains the number of bytes received.
   errno = 0;
   check = ::recv(clients.at(i).fd, buffer, sizeof(buffer), MSG_DONTWAIT);
-
   if (check == 0) {
-    logger.log(LogLevel::Info, "Client {} disconnected properly.",
-               clients_poll[i].fd);
-    client.alive = false;
+    logger.log(LogLevel::Info, "Player {} disconnected properly.",
+               client.player.username);
+    client.state = ConState::Terminated;
+    return (false);
   } else if (check < 0) {
     // We have to check these errors even if check event with poll() because of
     // spurious wakeup
     if (errno == EWOULDBLOCK || errno == EAGAIN) {
-      return (client.alive);
+      return (true);
     }
     logger.log(LogLevel::Error, "Client: {}.", clients_poll[i].fd);
     logger.log(LogLevel::Error, "{}", std::strerror(errno));
-    client.alive = false;
+    return (false);
   } else {
     client.buffer.append(buffer, check);
     process_msg(clients.at(i));
   }
-  return (client.alive);
+  return (true);
 }
 
 void Server::run() {
@@ -254,8 +275,13 @@ int main(void) {
     std::cerr << "sigaction error" << "\n";
     return (EXIT_FAILURE);
   }
-  Server server{};
-  server.start_listening();
-  server.run();
-  return (EXIT_SUCCESS);
+  try {
+    Server server{};
+    server.start_listening();
+    server.run();
+    return (EXIT_SUCCESS);
+  } catch (std::exception &e) {
+    std::println(std::cerr, "A standard exception was caught, with message: {}",
+                 e.what());
+  }
 }
