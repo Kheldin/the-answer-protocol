@@ -33,6 +33,21 @@ public:
     Texture2D getFightTexture() { return fightTexture; }
     Texture2D getLeftFightTexture() { return left_fightTexture; }
     Texture2D getRightFightTexture() { return right_fightTexture; }
+    
+    Texture2D getWheyTexture() { return wheyTexture; }
+    Texture2D getCreatineTexture() { return creatineTexture; }
+    Texture2D getTestoTexture() { return testoTexture; }
+    Texture2D getSupplementsTexture() { return supplementsTexture; }
+    
+    Texture2D getbenchPositionsTexture() { return benchPositionsTexture; }
+    Texture2D getsquatsPositionsTexture() { return squatsPositionsTexture; }
+    Texture2D getsprintPositionsTexture() { return sprintPositionsTexture; }
+    
+    std::unordered_map<std::string, Texture2D> getPoolTexture() { return poolTexture; }
+    std::unordered_map<std::string, Texture2D> getClimbingTexture() { return climbingTexture; }
+    
+    std::unordered_map<std::string, Texture2D> getSaunaTexture() { return saunaTexture; }
+    std::unordered_map<std::string, Texture2D> getMasageTexture() { return masageTexture; }
 
 private:
     std::unordered_map<std::string, Texture2D> player_textures {};
@@ -42,6 +57,21 @@ private:
     Texture2D fightTexture {};
     Texture2D left_fightTexture {};
     Texture2D right_fightTexture {};
+    
+    Texture2D benchPositionsTexture {};
+    Texture2D squatsPositionsTexture {};
+    Texture2D sprintPositionsTexture {};
+    
+    Texture2D wheyTexture {};
+    Texture2D testoTexture {};
+    Texture2D supplementsTexture {};
+    Texture2D creatineTexture {};
+    
+    std::unordered_map<std::string, Texture2D> poolTexture {};
+    std::unordered_map<std::string, Texture2D> climbingTexture {};
+    
+    std::unordered_map<std::string, Texture2D> saunaTexture {};
+    std::unordered_map<std::string, Texture2D> masageTexture {};
 
     std::unordered_map<std::string, Texture2D> reception_textures {};
     std::unordered_map<std::string, Vector2> reception_tpositions {};

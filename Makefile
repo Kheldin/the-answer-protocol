@@ -11,7 +11,9 @@ OBJ_DIR     = obj
 
 SERVER_SRCS = src/network/server.cpp src/utils/logger.cpp src/network/server_commands.cpp src/utils/utils.cpp src/network/group_commands.cpp
 CLI_SRCS    = src/network/client.cpp
-GUI_SRCS		= src/client_gui.cpp
+GUI_SRCS	= src/gui/client_gui.cpp src/gui/asset_manager.cpp src/gui/button.cpp \
+			  src/gui/room.cpp src/gui/inventory.cpp src/gui/item.cpp src/gui/quest.cpp \
+			  src/gui/quest_log.cpp src/player.cpp
 
 
 SERVER_OBJS = $(SERVER_SRCS:%.cpp=$(OBJ_DIR)/%.o)
