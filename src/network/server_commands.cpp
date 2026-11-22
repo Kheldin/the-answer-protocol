@@ -2,7 +2,6 @@
 #include "utils/logger.hpp"
 #include "utils/utils.hpp"
 #include <cctype>
-#include <print>
 #include <string>
 #include <string_view>
 #include <sys/socket.h>
@@ -15,6 +14,8 @@ void Server::dispatch_command(Client &client, Command &command) {
     quit(client, command);
   } else if (command.type == "WHO") {
     who(client, command);
+  } else if (command.type == "GROUP") {
+    group(client, command);
   }
   return;
 }

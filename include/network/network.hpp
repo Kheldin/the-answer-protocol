@@ -37,6 +37,12 @@ public:
 private:
 };
 
+class Group {
+public:
+  Group(std::string_view p_name) { name = p_name; }
+  std::string name{};
+};
+
 class Command {
 public:
   Command(std::string_view command) {
@@ -62,6 +68,7 @@ public:
   int sockfd{-1};
   Logger logger{"logfile"};
   std::vector<Client> clients{};
+  std::vector<Group> groups{};
 
 private:
   void accept_new_client();
@@ -72,4 +79,6 @@ private:
   void connect(Client &client, Command &command);
   void quit(Client &client, Command &command);
   void who(Client &client, Command &command);
+  void group(Client &client, Command &command);
+  void group_create(Client &client, Command &command);
 };
