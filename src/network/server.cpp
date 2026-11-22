@@ -245,7 +245,7 @@ void Server::run() {
         }
         close(clients_poll[i].fd);
         clients_poll.erase(clients_poll.begin() + i);
-        clients.erase(clients.at(i).fd);
+        remove_client(clients.at(i).fd);
         i--;
       } else if (clients_poll[i].revents & POLLIN) {
         // The index 0 is the server socket.
