@@ -39,11 +39,7 @@ private:
 
 class Group {
 public:
-  Group(Client *client, std::string_view p_name) {
-    clients.push_back(client);
-    name = p_name;
-  }
-  std::vector<Client *> clients{};
+  Group(std::string_view p_name) { name = p_name; }
   std::string name{};
 };
 
@@ -72,7 +68,6 @@ public:
   int sockfd{-1};
   Logger logger{"logfile"};
   std::vector<Client> clients{};
-  std::vector<std::string> group_list{};
   std::vector<Group> groups{};
 
 private:

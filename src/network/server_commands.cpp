@@ -2,7 +2,6 @@
 #include "utils/logger.hpp"
 #include "utils/utils.hpp"
 #include <cctype>
-#include <print>
 #include <string>
 #include <string_view>
 #include <sys/socket.h>

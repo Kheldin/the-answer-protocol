@@ -27,7 +27,7 @@ void Server::group_create(Client &client, Command &command) {
   }
   std::string res{"OK group="};
   res += name;
-  groups.emplace_back(&client, name);
+  groups.emplace_back(name);
   ::send(client.fd, res.data(), res.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Info, "Player {}: {}", client.player.username, res);
 }
