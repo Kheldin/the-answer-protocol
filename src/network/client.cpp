@@ -18,7 +18,7 @@ int main(void) {
   std::string command{buffer, (size_t)check};
   std::print("response: {}", command);
   const char *message = "CONNECT Pierre\n";
-  const char *message2 = "GROUP CREATE Karmine\n";
+  const char *message2 = "GdsaROUP CREATE Karmine\n";
   send(clientSocket, message, strlen(message), 0);
   check = ::recv(clientSocket, buffer, sizeof(buffer), 0);
 

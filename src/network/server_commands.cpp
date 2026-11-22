@@ -6,6 +6,7 @@
 #include <string_view>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <unordered_map>
 
 void Server::dispatch_command(Client &client, Command &command) {
   if (command.type == "CONNECT") {
@@ -26,10 +27,7 @@ void Server::connect(Client &client, Command &command) {
   static constexpr std::string_view already_connected{
       "ERR 203 ALREADY_CONNECTED"};
   static constexpr std::string_view connected{"OK connected"};
-  // This part may be optimized with std::find or a binary search if we sort the
-  // vector by username.
-  // I should check if there is anything else than alnum in the payload instead
-  // of just space.
+  // IL SE PASSE QUOI SI JENVOIE UNE STRING VIDE
   if (client.state == ConState::Authenticated) {
     ::send(client.fd, already_connected.data(), already_connected.size(),
            MSG_DONTWAIT | MSG_NOSIGNAL);
@@ -43,7 +41,7 @@ void Server::connect(Client &client, Command &command) {
                space_in_name);
     return;
   }
-  for (Client p_client : clients) {
+  for (const auto &[fd, p_client] : clients) {
     if (p_client.player.username == command.payload) {
       ::send(client.fd, name_used.data(), name_used.size(),
              MSG_DONTWAIT | MSG_NOSIGNAL);

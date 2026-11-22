@@ -1,6 +1,5 @@
 #include "network/network.hpp"
 #include "utils/logger.hpp"
-#include "utils/utils.hpp"
 #include <atomic>
 #include <cerrno>
 #include <csignal>
@@ -52,7 +51,7 @@ Server::Server() {
   monitor.events = POLLIN;
   monitor.revents = 0;
   clients_poll.emplace_back(monitor);
-  clients.emplace_back(monitor.fd);
+  add_client(monitor.fd);
 }
 
 Server::~Server() {
@@ -64,6 +63,14 @@ Server::~Server() {
       std::println(std::cerr, "{}", strerror(errno));
     }
   }
+}
+
+void Server::add_client(int fd) { clients.try_emplace(fd, fd); }
+void Server::remove_client(int fd) {
+  // Delete le fd des groupes aussi
+  // Et je dois delete aussi dans le clients_poll je pense ?
+  clients.erase(fd);
+  ::close(fd);
 }
 
 void Server::start_listening() {
@@ -93,7 +100,7 @@ void Server::accept_new_client() {
   pollstruct.events = POLLIN;
   pollstruct.revents = 0;
   pollstruct.fd = clientSocket;
-  clients.emplace_back(clientSocket);
+  add_client(clientSocket);
   clients_poll.emplace_back(pollstruct);
 
   static constexpr std::string_view greeting = "OK hello proto=1\n";
@@ -175,13 +182,13 @@ void Server::process_msg(Client &client) {
 }
 
 // Return false if the client terminated the connection
-bool Server::receive_msg(size_t i) {
+bool Server::receive_msg(int fd) {
   ssize_t check{0};
   char buffer[BUFFER_SIZE]{0};
-  Client &client{clients.at(i)};
+  Client &client{clients.at(fd)};
   // Check contains the number of bytes received.
   errno = 0;
-  check = ::recv(clients.at(i).fd, buffer, sizeof(buffer), MSG_DONTWAIT);
+  check = ::recv(clients.at(fd).fd, buffer, sizeof(buffer), MSG_DONTWAIT);
   if (check == 0) {
     logger.log(LogLevel::Info, "Player {} disconnected properly.",
                client.player.username);
@@ -193,12 +200,12 @@ bool Server::receive_msg(size_t i) {
     if (errno == EWOULDBLOCK || errno == EAGAIN) {
       return (true);
     }
-    logger.log(LogLevel::Error, "Client: {}.", clients_poll[i].fd);
+    logger.log(LogLevel::Error, "Client: {}.", fd);
     logger.log(LogLevel::Error, "{}", std::strerror(errno));
     return (false);
   } else {
     client.buffer.append(buffer, check);
-    process_msg(clients.at(i));
+    process_msg(clients.at(fd));
   }
   return (true);
 }
@@ -238,7 +245,7 @@ void Server::run() {
         }
         close(clients_poll[i].fd);
         clients_poll.erase(clients_poll.begin() + i);
-        clients.erase(clients.begin() + i);
+        clients.erase(clients.at(i).fd);
         i--;
       } else if (clients_poll[i].revents & POLLIN) {
         // The index 0 is the server socket.
@@ -247,10 +254,10 @@ void Server::run() {
         if (i == 0) {
           accept_new_client();
         } else {
-          if (!receive_msg(i)) {
+          if (!receive_msg(clients_poll.at(i).fd)) {
             close(clients_poll[i].fd);
             clients_poll.erase(clients_poll.begin() + i);
-            clients.erase(clients.begin() + i);
+            clients.erase(clients.at(i).fd);
             i--;
           }
         }

@@ -1,27 +1,24 @@
 #pragma once
+#include "player.hpp"
 #include "utils/logger.hpp"
 #include <netinet/in.h>
 #include <poll.h>
 #include <string>
 #include <string_view>
+#include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #define BUFFER_SIZE 22 // 1023 "effective" bytes to keep the 1024th for the \0
 
 enum class ConState { Disconnected, Connected, Authenticated, Terminated };
 
-class Player {
-public:
-  std::string username{};
-
-private:
-};
-
 class Client {
 public:
-  Client(int p_fd) {
+  explicit Client(int p_fd) {
     fd = p_fd;
     buffer.reserve(BUFFER_SIZE);
   }
@@ -39,8 +36,12 @@ private:
 
 class Group {
 public:
-  Group(std::string_view p_name) { name = p_name; }
+  Group(std::string_view p_name, int fd) {
+    name = p_name;
+    members_fd.insert(fd);
+  }
   std::string name{};
+  std::unordered_set<int> members_fd{};
 };
 
 class Command {
@@ -67,12 +68,14 @@ public:
   std::vector<pollfd> clients_poll{};
   int sockfd{-1};
   Logger logger{"logfile"};
-  std::vector<Client> clients{};
-  std::vector<Group> groups{};
+  std::unordered_map<int, Client> clients{};
+  std::unordered_map<std::string, Group> groups{};
 
 private:
   void accept_new_client();
-  bool receive_msg(size_t i);
+  void add_client(int fd);
+  void remove_client(int fd);
+  bool receive_msg(int fd);
   void process_msg(Client &client);
   void send_unknown_command(Client &client);
   void dispatch_command(Client &client, Command &command);
