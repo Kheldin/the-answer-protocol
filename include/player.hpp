@@ -5,30 +5,30 @@
 class Player {
 public:
     Player() = default;
-    Player(const std::string& name, int maxHp = 100);
+    Player(const std::string& name, int maxEnergy = 100);
 
     std::string username{};
 
     const std::string& getName() const { return username; }
     void setName(const std::string& name) { username = name; }
-    int getHp() const { return _hp; }
-    int getMaxHp() const { return _maxHp; }
+    int getEnergy() const { return _energy; }
+    int getMaxEnergy() const { return _maxEnergy; }
     int getLevel() const { return _level; }
     int getXp() const { return _xp; }
     int getBonusDamage() const { return _bonusDamage; }
-    bool isAlive() const { return _hp > 0; }
+    bool hasEnergy(int cost = 1) const { return _energy >= cost; }
     void setBonusDamage(int bonus) { _bonusDamage = bonus; }
 
-    int& hpRef() { return _hp; }
+    int& energyRef() { return _energy; }
     int& bonusDamageRef() { return _bonusDamage; }
 
-    void takeDamage(int amount);
-    void heal(int amount);
+    void consumeEnergy(int amount);
+    void restoreEnergy(int amount);
     void addXp(int amount);
 
 private:
-    int _hp{100};
-    int _maxHp{100};
+    int _energy{100};
+    int _maxEnergy{100};
     int _level{1};
     int _xp{0};
     int _bonusDamage{0};

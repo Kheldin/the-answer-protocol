@@ -13,7 +13,7 @@ public:
     void SetOpen(bool open);
 
     void AddQuest(const Quest& quest);
-    void AdvanceQuest(const std::string& id, int amount = 1);
+    bool AdvanceQuest(const std::string& id, int amount = 1);
 
     std::string Update(Vector2 mousePos);
     void DrawJournal(int screenWidth, int screenHeight) const;

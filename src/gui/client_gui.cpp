@@ -5,10 +5,43 @@
 #include "gui/inventory.hpp"
 #include "gui/item.hpp"
 #include "gui/quest_log.hpp"
+#include "gui/chat_box.hpp"
 #include "player.hpp"
 #include <unordered_map>
 #include <string>
 #include <vector>
+
+enum class Rooms { Reception, LockerRoom, Muscu, Cardio, Pool, Climbing, Sauna, Masage };
+
+struct WorldItem {
+    Rooms room;
+    std::string name;
+    ItemType type;
+    Texture2D texture;
+    int value;
+    Vector2 pos;
+    InteractiveButton pickupButton;
+};
+
+struct RemotePlayer {
+    std::string username;
+    Rooms room;
+    Vector2 pos;
+};
+
+static std::string roomToProtocolName(Rooms r) {
+    switch (r) {
+        case Rooms::Reception:  return "reception";
+        case Rooms::LockerRoom: return "locker_room";
+        case Rooms::Muscu:      return "muscu";
+        case Rooms::Cardio:     return "cardio";
+        case Rooms::Pool:       return "pool";
+        case Rooms::Climbing:   return "climbing";
+        case Rooms::Sauna:      return "sauna";
+        case Rooms::Masage:     return "massage";
+    }
+    return "reception";
+}
 
 int main(void)
 {
@@ -16,7 +49,7 @@ int main(void)
     int screenHeight {450};
 
     SetConfigFlags(FLAG_WINDOW_TOPMOST | FLAG_WINDOW_UNDECORATED);
-    InitWindow(screenWidth, screenHeight, "Borderless fullscreen");
+    InitWindow(screenWidth, screenHeight, "TAP - Gym Adventure");
     int monitor = GetCurrentMonitor();
     screenWidth = GetMonitorWidth(monitor);
     screenHeight = GetMonitorHeight(monitor);
@@ -29,6 +62,7 @@ int main(void)
 
     std::unordered_map<std::string, Texture2D> player_textures = manager.getPlayerTextures();
     Texture2D current_guy = player_textures.at("guy_front");
+    Texture2D remote_guy_tex = player_textures.at("guy_front");
 
     Texture2D buttonsTexture = manager.getButtonsTextures();
     float bframeWidth = (float)buttonsTexture.width / 1.9f;
@@ -37,15 +71,19 @@ int main(void)
 
     Rectangle pos1 = { 1650.0f, 570.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
     Rectangle zone1 = { pos1.x - 250, pos1.y + 100, pos1.width + 310, pos1.height + 60 };
-    InteractiveButton npcButton(pos1, zone1, "Hi, welcome to the gym !\nWhat can I do for you today?");
+    InteractiveButton npcButton(pos1, zone1, "Bienvenue a la salle !\nTe voila inscrit. Va faire un tour au shop !");
 
-    Rectangle pos2 = { 1680.0f, 120.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
+    Rectangle pos2 = { 1280.0f, 120.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
     Rectangle zone2 = { pos2.x - 250, pos2.y + 100, pos2.width + 310, pos2.height + 60 };
     InteractiveButton shopButton(pos2, zone2, "");
     
     Rectangle pos3 = { 600.0f, 700.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
     Rectangle zone3 = { pos3.x - 250, pos3.y + 100, pos3.width + 310, pos3.height + 60 };
     InteractiveButton fightButton(pos3, zone3, "");
+
+    Rectangle posShower = { 850.0f, 450.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
+    Rectangle zoneShower = { posShower.x - 250, posShower.y + 100, posShower.width + 310, posShower.height + 60 };
+    InteractiveButton showerButton(posShower, zoneShower, "Douche prise ! (+30 Energie)");
 
     Room Reception(manager.getReceptionTextures(), manager.getReceptionTexturesPositions(), manager.getReceptionHitboxes());
     Room LockerRoom(manager.getLockerRoomTextures(), manager.getLockerRoomTexturesPositions(), manager.getLockerRoomHitboxes());
@@ -56,25 +94,18 @@ int main(void)
     Room Sauna(manager.getSaunaTexture(), manager.getCardioTexturesPositions(), manager.getCardioHitboxes());
     Room Masage(manager.getMasageTexture(), manager.getCardioTexturesPositions(), manager.getCardioHitboxes());
 
-    // --- BOUTONS MUSCU ---
-    Rectangle posPress = { 900.0f, 350.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
+    Rectangle posPress = { 1700.0f, 350.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
     Rectangle zonePress = { posPress.x - 250, posPress.y + 100, posPress.width + 310, posPress.height + 60 };
     InteractiveButton pressButton(posPress, zonePress, "");
 
-    Rectangle posBench = { 1350.0f, 450.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
+    Rectangle posBench = { 400.0f, 150.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
     Rectangle zoneBench = { posBench.x - 250, posBench.y + 100, posBench.width + 310, posBench.height + 60 };
     InteractiveButton benchButton(posBench, zoneBench, "");
 
-    // --- BOUTONS CARDIO ---
-    Rectangle posBike = { 500.0f, 400.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
-    Rectangle zoneBike = { posBike.x - 250, posBike.y + 100, posBike.width + 310, posBike.height + 60 };
-    InteractiveButton bikeButton(posBike, zoneBike, "");
-
-    Rectangle posTreadmill = { 1100.0f, 400.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
+    Rectangle posTreadmill = { 550.0f, 400.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
     Rectangle zoneTreadmill = { posTreadmill.x - 250, posTreadmill.y + 100, posTreadmill.width + 310, posTreadmill.height + 60 };
     InteractiveButton treadmillButton(posTreadmill, zoneTreadmill, "");
 
-    // --- VARIABLES SHOP ---
     Texture2D shopTexture = manager.getShopTexture(); 
     float shopScale = 0.7f; 
     bool isShopOpen = false;
@@ -85,7 +116,6 @@ int main(void)
     Rectangle item4 = { 1182.0f, 818.0f, 290.0f, 55.0f };
     float shopClickTimers[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-    // --- VARIABLES EXERCICES ---
     Texture2D benchPositionsTexture = manager.getbenchPositionsTexture(); 
     Texture2D squatsPositionsTexture = manager.getsquatsPositionsTexture(); 
     Texture2D sprintPositionsTexture = manager.getsprintPositionsTexture();
@@ -99,8 +129,9 @@ int main(void)
     float exerciseDurationTimer = 0.0f;
     float exerciseSwapTimer = 0.0f;
     int exerciseFrame = 0;
+    const int EXERCISE_ENERGY_COST = 25;
+    float lowEnergyWarningTimer = 0.0f;
 
-    // --- VARIABLES COMBAT ---
     Texture2D fightTexture = manager.getFightTexture(); 
     Texture2D leftFightTexture = manager.getLeftFightTexture();
     Texture2D rightFightTexture = manager.getRightFightTexture();
@@ -112,7 +143,7 @@ int main(void)
     bool isFighting = false;
     bool wasFighting = false;
 
-    int npcHP = 100;
+    int npcEnergy = 100;
     enum class FightState { PLAYER_WAIT, PLAYER_QTE, PLAYER_ATTACK, NPC_WAIT, NPC_ATTACK, END };
     FightState fState = FightState::PLAYER_WAIT;
     int qteKey = 0; 
@@ -120,13 +151,64 @@ int main(void)
     int pFrame = 0;
     int nFrame = 3;
 
-    // --- INSTANCE DU JOUEUR, INVENTAIRE & QUÊTES ---
     Inventory inventory(manager);
     Player player("Antoine", 100);
     QuestLog questLog;
+    ChatBox chatBox;
+    bool wasShowering = false;
 
-    enum class Rooms { Reception, LockerRoom, Muscu, Cardio, Pool, Climbing, Sauna, Masage };
+    std::vector<WorldItem> droppedItems;
+    std::vector<RemotePlayer> otherPlayers; // Sera rempli par les messages réseau du serveur
+
+    // Point d'entrée unique vers le client TCP (à brancher sur la branche réseau)
+    auto sendNetworkCommand = [&](const std::string& cmd) {
+        if (cmd.empty()) return;
+        if (cmd.rfind("say ", 0) == 0) {
+            chatBox.AddMessage(player.getName(), cmd.substr(4), WHITE);
+        } else {
+            // Affiche la commande protocole générée en attendant le socket TCP
+            chatBox.AddSystemMessage("CMD -> " + cmd);
+        }
+        // TODO (branche réseau): tcpClient.sendLine(cmd);
+    };
+
+    auto spawnDroppedItem = [&](const std::string& rawName, Rooms room, Vector2 dropPos) {
+        ItemType type = ItemType::CONSUMABLE;
+        Texture2D tex = manager.getWheyTexture();
+        int val = 25;
+        std::string cleanName = "Whey Protein";
+
+        if (rawName.find("Creatine") != std::string::npos || rawName.find("creatine") != std::string::npos) {
+            cleanName = "Creatine";
+            tex = manager.getCreatineTexture();
+            val = 15;
+        } else if (rawName.find("Testo") != std::string::npos || rawName.find("testo") != std::string::npos) {
+            cleanName = "Testo";
+            type = ItemType::BOOSTER;
+            tex = manager.getTestoTexture();
+            val = 25;
+        } else if (rawName.find("Supplements") != std::string::npos || rawName.find("supplements") != std::string::npos) {
+            cleanName = "Supplements";
+            tex = manager.getSupplementsTexture();
+            val = 20;
+        }
+
+        Rectangle btnPos = { dropPos.x + 15.0f, dropPos.y - 45.0f, bframeWidth * 0.2f, bframeHeight * 0.2f };
+        Rectangle btnZone = { dropPos.x - 60.0f, dropPos.y - 60.0f, 180.0f, 180.0f };
+
+        droppedItems.push_back({
+            room,
+            cleanName,
+            type,
+            tex,
+            val,
+            dropPos,
+            InteractiveButton(btnPos, btnZone, "")
+        });
+    };
+
     Rooms currentRoom {Rooms::Reception};
+    Rooms previousRoom {Rooms::Reception};
     
     const float HITBOX_OFFSET_X = 5.0f;
     const float HITBOX_OFFSET_Y = 172.0f;
@@ -142,7 +224,7 @@ int main(void)
     int currentFrame = 0;
     Rectangle frameRec = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-    const float speed = 15.0f;
+    const float speed = 10.0f;
     float scale = 0.6f;
 
     Rectangle destRec = {
@@ -162,74 +244,109 @@ int main(void)
     {
         float dt = GetFrameTime();
         framesCounter++;
+        if (lowEnergyWarningTimer > 0.0f) lowEnergyWarningTimer -= dt;
+
+        bool isExercising = (activeExercise != ExerciseType::NONE);
+        bool isChatFocused = chatBox.IsFocused();
+        bool canOpenMenu = !isShopOpen && !isFighting && !isExercising && !npcButton.getIsTalking() && !showerButton.getIsTalking() && !isChatFocused;
+
+        std::string chatCmd = chatBox.Update(!isShopOpen && !isFighting && !isExercising && !inventory.IsOpen() && !questLog.IsOpen());
+        if (!chatCmd.empty()) {
+            sendNetworkCommand(chatCmd);
+        }
+        isChatFocused = chatBox.IsFocused();
+
         Rectangle playerHitbox = get_feet_hitbox(destRec.x, destRec.y);
-        bool inReception = (currentRoom == Rooms::Reception);
-        bool inMuscu = (currentRoom == Rooms::Muscu);
-        bool inCardio = (currentRoom == Rooms::Cardio);
+        bool inReception = (currentRoom == Rooms::Reception) && !isChatFocused;
+        bool inLockerRoom = (currentRoom == Rooms::LockerRoom) && !isChatFocused;
+        bool inMuscu = (currentRoom == Rooms::Muscu) && !isChatFocused;
+        bool inCardio = (currentRoom == Rooms::Cardio) && !isChatFocused;
 
         npcButton.Update(playerHitbox, inReception);
         shopButton.Update(playerHitbox, inReception);
+        showerButton.Update(playerHitbox, inLockerRoom);
         fightButton.Update(playerHitbox, inMuscu);
 
         pressButton.Update(playerHitbox, inMuscu);
         benchButton.Update(playerHitbox, inMuscu);
-        bikeButton.Update(playerHitbox, inCardio);
         treadmillButton.Update(playerHitbox, inCardio);
 
-        // --- DÉCLENCHEMENT DES EXERCICES (6 SECONDES) ---
-        if (activeExercise == ExerciseType::NONE) {
-            if (pressButton.getIsTalking()) {
-                activeExercise = ExerciseType::SQUATS;
-                pendingQuestId = "use_press";
-                exerciseDurationTimer = 0.0f;
-                exerciseSwapTimer = 0.0f;
-                exerciseFrame = 0;
-                pressButton.setIsTalking(false);
-            }
-            else if (benchButton.getIsTalking()) {
-                activeExercise = ExerciseType::BENCH;
-                pendingQuestId = "use_bench";
-                exerciseDurationTimer = 0.0f;
-                exerciseSwapTimer = 0.0f;
-                exerciseFrame = 0;
-                benchButton.setIsTalking(false);
-            }
-            else if (bikeButton.getIsTalking()) {
-                activeExercise = ExerciseType::SPRINT;
-                pendingQuestId = "use_bike";
-                exerciseDurationTimer = 0.0f;
-                exerciseSwapTimer = 0.0f;
-                exerciseFrame = 0;
-                bikeButton.setIsTalking(false);
-            }
-            else if (treadmillButton.getIsTalking()) {
-                activeExercise = ExerciseType::SPRINT;
-                pendingQuestId = "use_treadmill";
-                exerciseDurationTimer = 0.0f;
-                exerciseSwapTimer = 0.0f;
-                exerciseFrame = 0;
-                treadmillButton.setIsTalking(false);
+        for (size_t i = 0; i < droppedItems.size(); ) {
+            bool isInSameRoom = (droppedItems[i].room == currentRoom) && !isChatFocused;
+            droppedItems[i].pickupButton.Update(playerHitbox, isInSameRoom);
+
+            if (isInSameRoom && droppedItems[i].pickupButton.getIsTalking()) {
+                inventory.AddItem(Item(
+                    droppedItems[i].name,
+                    droppedItems[i].type,
+                    droppedItems[i].texture,
+                    droppedItems[i].value,
+                    1
+                ));
+                sendNetworkCommand("take " + droppedItems[i].name);
+                droppedItems.erase(droppedItems.begin() + i);
+            } else {
+                ++i;
             }
         }
 
+        bool isShowering = showerButton.getIsTalking();
+        if (isShowering && !wasShowering) {
+            player.restoreEnergy(30);
+            if (questLog.AdvanceQuest("take_shower", 1)) {
+                player.addXp(40);
+                sendNetworkCommand("quest complete take_shower");
+            }
+        }
+        wasShowering = isShowering;
+
+        if (activeExercise == ExerciseType::NONE) {
+            auto tryStartExercise = [&](InteractiveButton& btn, ExerciseType type, const std::string& questId) {
+                if (!btn.getIsTalking()) return;
+                btn.setIsTalking(false);
+                if (player.hasEnergy(EXERCISE_ENERGY_COST)) {
+                    player.consumeEnergy(EXERCISE_ENERGY_COST);
+                    activeExercise = type;
+                    pendingQuestId = questId;
+                    exerciseDurationTimer = 0.0f;
+                    exerciseSwapTimer = 0.0f;
+                    exerciseFrame = 0;
+                } else {
+                    lowEnergyWarningTimer = 2.5f;
+                }
+            };
+
+            tryStartExercise(pressButton, ExerciseType::SQUATS, "use_press");
+            tryStartExercise(benchButton, ExerciseType::BENCH, "use_bench");
+            tryStartExercise(treadmillButton, ExerciseType::SPRINT, "use_treadmill");
+        }
+
         if (npcButton.getIsTalking()) {
-            questLog.AdvanceQuest("gym_tour", 1);
+            if (questLog.AdvanceQuest("register_gym", 1)) {
+                player.addXp(25);
+                sendNetworkCommand("quest complete register_gym");
+            }
         }
 
         isShopOpen = shopButton.getIsTalking();
         isFighting = fightButton.getIsTalking();
 
         if (isFighting && !wasFighting) {
-            player.heal(player.getMaxHp());
-            npcHP = 100;
-            fState = FightState::PLAYER_WAIT;
-            fightTimer = 1.0f;
-            pFrame = 0;
-            nFrame = 3;
+            if (!player.hasEnergy(20)) {
+                fightButton.setIsTalking(false);
+                isFighting = false;
+                lowEnergyWarningTimer = 2.5f;
+            } else {
+                npcEnergy = 100;
+                fState = FightState::PLAYER_WAIT;
+                fightTimer = 1.0f;
+                pFrame = 0;
+                nFrame = 3;
+            }
         }
         wasFighting = isFighting;
 
-        if (!(framesCounter % 5) && (IsKeyDown(KEY_LEFT) or IsKeyDown(KEY_RIGHT) or IsKeyDown(KEY_DOWN) or IsKeyDown(KEY_UP)))
+        if (!isChatFocused && !(framesCounter % 5) && (IsKeyDown(KEY_LEFT) or IsKeyDown(KEY_RIGHT) or IsKeyDown(KEY_DOWN) or IsKeyDown(KEY_UP)))
             currentFrame++;
 
         std::vector<Rectangle> current_hitboxes;
@@ -244,8 +361,6 @@ int main(void)
             case Rooms::Masage:     current_hitboxes = Cardio.getHitboxes(); break;
         }
 
-        bool isExercising = (activeExercise != ExerciseType::NONE);
-        bool canOpenMenu = !isShopOpen && !isFighting && !isExercising && !npcButton.getIsTalking();
         if (canOpenMenu && !questLog.IsOpen() && IsKeyPressed(KEY_I)) {
             inventory.Toggle();
         }
@@ -265,20 +380,26 @@ int main(void)
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 if (CheckCollisionPointRec(mousePos, item1)) {
                     inventory.AddItem(Item("Whey Protein", ItemType::CONSUMABLE, manager.getWheyTexture(), 25, 1));
-                    questLog.AdvanceQuest("protein_up", 1);
+                    if (questLog.AdvanceQuest("protein_up", 1)) player.addXp(30);
+                    sendNetworkCommand("buy Whey Protein");
                     shopClickTimers[0] = 0.5f;
                 }
                 else if (CheckCollisionPointRec(mousePos, item2)) {
                     inventory.AddItem(Item("Creatine", ItemType::CONSUMABLE, manager.getCreatineTexture(), 15, 1));
-                    questLog.AdvanceQuest("protein_up", 1);
+                    if (questLog.AdvanceQuest("protein_up", 1)) player.addXp(30);
+                    sendNetworkCommand("buy Creatine");
                     shopClickTimers[1] = 0.5f;
                 }
                 else if (CheckCollisionPointRec(mousePos, item3)) {
                     inventory.AddItem(Item("Testo", ItemType::BOOSTER, manager.getTestoTexture(), 25, 1));
+                    if (questLog.AdvanceQuest("protein_up", 1)) player.addXp(30);
+                    sendNetworkCommand("buy Testo");
                     shopClickTimers[2] = 0.5f;
                 }
                 else if (CheckCollisionPointRec(mousePos, item4)) {
                     inventory.AddItem(Item("Supplements", ItemType::CONSUMABLE, manager.getSupplementsTexture(), 20, 1));
+                    if (questLog.AdvanceQuest("protein_up", 1)) player.addXp(30);
+                    sendNetworkCommand("buy Supplements");
                     shopClickTimers[3] = 0.5f;
                 }
             }
@@ -288,19 +409,22 @@ int main(void)
             }
         }
         else if (inventory.IsOpen()) {
-            std::string cmd = inventory.Update(GetMousePosition(), player.hpRef(), player.bonusDamageRef());
-            if (player.getHp() > player.getMaxHp()) {
-                player.hpRef() = player.getMaxHp();
+            std::string cmd = inventory.Update(GetMousePosition(), player.energyRef(), player.bonusDamageRef());
+            if (player.getEnergy() > player.getMaxEnergy()) {
+                player.energyRef() = player.getMaxEnergy();
             }
             if (!cmd.empty()) {
-                // Plus tard : sendToServer(cmd);
+                if (cmd.rfind("drop ", 0) == 0) {
+                    std::string itemName = cmd.substr(5);
+                    Vector2 dropPos = { destRec.x + 20.0f, destRec.y + 130.0f };
+                    spawnDroppedItem(itemName, currentRoom, dropPos);
+                }
+                sendNetworkCommand(cmd);
             }
         }
         else if (questLog.IsOpen()) {
-            std::string cmd = questLog.Update(GetMousePosition());
-            if (!cmd.empty()) {
-                // Plus tard : sendToServer(cmd);
-            }
+            std::string qCmd = questLog.Update(GetMousePosition());
+            if (!qCmd.empty()) sendNetworkCommand(qCmd);
         }
         else if (isExercising)
         {
@@ -313,7 +437,9 @@ int main(void)
             }
 
             if (exerciseDurationTimer >= 6.0f) {
-                questLog.AdvanceQuest(pendingQuestId, 1);
+                if (questLog.AdvanceQuest(pendingQuestId, 1)) {
+                    sendNetworkCommand("quest complete " + pendingQuestId);
+                }
                 player.addXp(50);
                 activeExercise = ExerciseType::NONE;
                 pendingQuestId = "";
@@ -341,7 +467,7 @@ int main(void)
                         int key = GetKeyPressed();
                         if (key != 0) {
                             if (key == qteKey) {
-                                npcHP -= (35 + player.getBonusDamage());
+                                npcEnergy -= (35 + player.getBonusDamage());
                                 qteKey = 1;
                             } else {
                                 qteKey = 0;
@@ -357,9 +483,11 @@ int main(void)
                     else { pFrame = 0; nFrame = 3; }
                     
                     if (fightTimer <= 0) {
-                        if (npcHP <= 0) {
+                        if (npcEnergy <= 0) {
                             fState = FightState::END;
-                            questLog.AdvanceQuest("heavy_weight", 1);
+                            if (questLog.AdvanceQuest("heavy_weight", 1)) {
+                                sendNetworkCommand("quest complete heavy_weight");
+                            }
                             player.addXp(100);
                         }
                         else { fightTimer = 1.0f; fState = FightState::NPC_WAIT; }
@@ -371,20 +499,19 @@ int main(void)
                     if (fightTimer <= 0) {
                         fightTimer = 1.0f;
                         fState = FightState::NPC_ATTACK;
-                        player.takeDamage(20);
                     }
                     break;
                 case FightState::NPC_ATTACK:
                     fightTimer -= dt;
                     pFrame = 3; nFrame = 2;
                     if (fightTimer <= 0) {
-                        if (!player.isAlive()) fState = FightState::END;
+                        if (!player.hasEnergy(1)) fState = FightState::END;
                         else { fightTimer = 1.0f; fState = FightState::PLAYER_WAIT; }
                     }
                     break;
                 case FightState::END:
-                    pFrame = player.isAlive() ? 0 : 3;
-                    nFrame = (npcHP > 0) ? 3 : 0;
+                    pFrame = player.hasEnergy(1) ? 0 : 3;
+                    nFrame = (npcEnergy > 0) ? 3 : 0;
                     if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_ENTER)) {
                         fightButton.setIsTalking(false);
                     }
@@ -395,9 +522,9 @@ int main(void)
                 fightButton.setIsTalking(false);
             }
         }
-        else 
+        else if (!isChatFocused)
         {
-            bool isTalkingAny = npcButton.getIsTalking();
+            bool isTalkingAny = npcButton.getIsTalking() || showerButton.getIsTalking();
 
             if (!isTalkingAny)
             {
@@ -520,6 +647,12 @@ int main(void)
                 break;
         }
 
+        // Notification réseau automatique à chaque changement de salle
+        if (currentRoom != previousRoom) {
+            sendNetworkCommand("move " + roomToProtocolName(currentRoom));
+            previousRoom = currentRoom;
+        }
+
         if (framesCounter >= (60/framesSpeed)) {
             framesCounter = 0;
             int max_frames = frame_faces ? 2 : 3;
@@ -546,6 +679,7 @@ int main(void)
             case Rooms::LockerRoom:
                 DrawText("LockerRoom", screenWidth/2, screenHeight/2, 50, BLACK);
                 LockerRoom.draw();
+                showerButton.Draw(buttonsTexture, bframeWidth, bframeHeight, cropOffset);
                 break;
             case Rooms::Muscu:
                 DrawText("Muscu", screenWidth/2, screenHeight/2, 50, BLACK);
@@ -557,7 +691,6 @@ int main(void)
             case Rooms::Cardio:
                 DrawText("Cardio", screenWidth/2, screenHeight/2, 50, BLACK);
                 Cardio.draw();
-                bikeButton.Draw(buttonsTexture, bframeWidth, bframeHeight, cropOffset);
                 treadmillButton.Draw(buttonsTexture, bframeWidth, bframeHeight, cropOffset);
                 break;
             case Rooms::Climbing:
@@ -573,10 +706,30 @@ int main(void)
                 Masage.draw();
                 break;
         }
+
+        for (auto& wItem : droppedItems) {
+            if (wItem.room == currentRoom) {
+                float itemScale = 0.25f;
+                DrawTextureEx(wItem.texture, wItem.pos, 0.0f, itemScale, WHITE);
+                wItem.pickupButton.Draw(buttonsTexture, bframeWidth, bframeHeight, cropOffset);
+            }
+        }
+
+        for (const auto& rp : otherPlayers) {
+            if (rp.room == currentRoom) {
+                Rectangle rSrc = { 0.0f, 0.0f, (float)remote_guy_tex.width / 2.0f, (float)remote_guy_tex.height };
+                Rectangle rDest = { rp.pos.x, rp.pos.y, rSrc.width * scale, rSrc.height * scale };
+                DrawTexturePro(remote_guy_tex, rSrc, rDest, {0.0f, 0.0f}, 0.0f, SKYBLUE);
+
+                int nameW = MeasureText(rp.username.c_str(), 18);
+                DrawRectangle((int)(rp.pos.x + rDest.width / 2 - nameW / 2 - 6), (int)(rp.pos.y - 26), nameW + 12, 22, Fade(BLACK, 0.7f));
+                DrawText(rp.username.c_str(), (int)(rp.pos.x + rDest.width / 2 - nameW / 2), (int)(rp.pos.y - 23), 18, WHITE);
+            }
+        }
         
         if (!isExercising) {
             DrawTexturePro(current_guy, frameRec, destRec, origin, 0.0f, WHITE);
-            DrawRectangleLinesEx(playerHitbox, 2.0f, RED);
+            // DrawRectangleLinesEx(playerHitbox, 2.0f, RED);
         }
 
         if (isShopOpen) {
@@ -651,8 +804,8 @@ int main(void)
             Rectangle nDest = { 3.0f*screenWidth/4.0f - 50.0f - (nFrameW*spriteScale)/2.0f, screenHeight/2.0f - (nFrameH*spriteScale)/2.0f + 50, nFrameW * spriteScale, nFrameH * spriteScale };
             DrawTexturePro(rightFightTexture, nSrc, nDest, {0,0}, 0.0f, WHITE);
 
-            DrawText(TextFormat("PLAYER HP: %d", player.getHp()), screenWidth/4 - 100, 50, 30, GREEN);
-            DrawText(TextFormat("NPC HP: %d", npcHP), 3*screenWidth/4 - 80, 50, 30, RED);
+            DrawText(TextFormat("TON ENERGIE: %d", player.getEnergy()), screenWidth/4 - 120, 50, 30, GOLD);
+            DrawText(TextFormat("ADVERSAIRE: %d", npcEnergy), 3*screenWidth/4 - 100, 50, 30, RED);
 
             if (fState == FightState::PLAYER_QTE) {
                 DrawText("QTE! PRESS:", screenWidth/2 - 100, screenHeight/2 - 150, 30, WHITE);
@@ -662,16 +815,23 @@ int main(void)
                 if (qteKey == 1) DrawText("HIT!", screenWidth/2 - 50, screenHeight/2 - 100, 50, GREEN);
                 else DrawText("MISS!", screenWidth/2 - 60, screenHeight/2 - 100, 50, RED);
             } else if (fState == FightState::END) {
-                if (player.isAlive()) DrawText("YOU WIN!", screenWidth/2 - 100, screenHeight/2 - 100, 50, GREEN);
-                else DrawText("YOU LOSE!", screenWidth/2 - 110, screenHeight/2 - 100, 50, RED);
+                if (player.hasEnergy(1)) DrawText("DEFI REMPORTE !", screenWidth/2 - 140, screenHeight/2 - 100, 50, GREEN);
+                else DrawText("EPUISE !", screenWidth/2 - 90, screenHeight/2 - 100, 50, RED);
                 DrawText("Press ENTER or ESC to exit", screenWidth/2 - 140, screenHeight/2, 20, WHITE);
             }
         }
         else {
             npcButton.DrawDialog(screenWidth, screenHeight);
+            showerButton.DrawDialog(screenWidth, screenHeight);
         }
 
-        // --- HUD JOUEUR (EN HAUT À GAUCHE) ---
+        if (lowEnergyWarningTimer > 0.0f) {
+            const char* warn = "You need recovery. No more energy.";
+            int wText = MeasureText(warn, 22);
+            DrawRectangle(screenWidth / 2 - wText / 2 - 15, 150, wText + 30, 40, Fade(RED, 0.85f));
+            DrawText(warn, screenWidth / 2 - wText / 2, 160, 22, WHITE);
+        }
+
         {
             const int hudX = 20;
             const int hudY = 20;
@@ -681,20 +841,17 @@ int main(void)
             DrawRectangleRounded({ (float)hudX, (float)hudY, (float)hudW, (float)hudH }, 0.15f, 8, Fade(BLACK, 0.75f));
             DrawRectangleRoundedLines({ (float)hudX, (float)hudY, (float)hudW, (float)hudH }, 0.15f, 8, Fade(WHITE, 0.4f));
 
-            // Nom & Niveau
             DrawText(player.getName().c_str(), hudX + 15, hudY + 12, 22, WHITE);
             const char* lvlText = TextFormat("LVL %d", player.getLevel());
             DrawText(lvlText, hudX + hudW - MeasureText(lvlText, 22) - 15, hudY + 12, 22, GOLD);
 
-            // Barre de PV
-            float hpRatio = (player.getMaxHp() > 0) ? (float)player.getHp() / (float)player.getMaxHp() : 0.0f;
-            Color hpColor = (hpRatio > 0.5f) ? GREEN : ((hpRatio > 0.25f) ? ORANGE : RED);
+            float energyRatio = (player.getMaxEnergy() > 0) ? (float)player.getEnergy() / (float)player.getMaxEnergy() : 0.0f;
+            Color energyColor = (energyRatio > 0.5f) ? GOLD : ((energyRatio > 0.25f) ? ORANGE : RED);
             DrawRectangle(hudX + 15, hudY + 46, hudW - 30, 22, DARKGRAY);
-            DrawRectangle(hudX + 15, hudY + 46, (int)((hudW - 30) * hpRatio), 22, hpColor);
+            DrawRectangle(hudX + 15, hudY + 46, (int)((hudW - 30) * energyRatio), 22, energyColor);
             DrawRectangleLines(hudX + 15, hudY + 46, hudW - 30, 22, WHITE);
-            DrawText(TextFormat("HP: %d / %d", player.getHp(), player.getMaxHp()), hudX + 22, hudY + 49, 16, WHITE);
+            DrawText(TextFormat("ENERGY: %d / %d", player.getEnergy(), player.getMaxEnergy()), hudX + 22, hudY + 49, 16, BLACK);
 
-            // Barre d'XP (seuil = level * 100)
             int xpNeeded = player.getLevel() * 100;
             float xpRatio = (xpNeeded > 0) ? (float)player.getXp() / (float)xpNeeded : 0.0f;
             if (xpRatio > 1.0f) xpRatio = 1.0f;
@@ -704,10 +861,9 @@ int main(void)
             DrawText(TextFormat("XP: %d / %d", player.getXp(), xpNeeded), hudX + 22, hudY + 80, 14, WHITE);
         }
 
-        // --- ENCADRÉ DES TOUCHES (EN BAS À GAUCHE) ---
         {
             const int boxW = 270;
-            const int boxH = 145;
+            const int boxH = 165;
             const int boxX = 20;
             const int boxY = screenHeight - boxH - 20;
 
@@ -719,10 +875,12 @@ int main(void)
             DrawText("[E/Enter] Interact", boxX + 15, boxY + 58, 16, LIGHTGRAY);
             DrawText("[I]       Inventory", boxX + 15, boxY + 80, 16, LIGHTGRAY);
             DrawText("[Q]       Quests / Tasks", boxX + 15, boxY + 102, 16, LIGHTGRAY);
-            DrawText("[ESC]     Close Menu", boxX + 15, boxY + 124, 16, LIGHTGRAY);
+            DrawText("[T]       Chat / Whisper", boxX + 15, boxY + 124, 16, LIGHTGRAY);
+            DrawText("[ESC]     Close Menu", boxX + 15, boxY + 144, 16, LIGHTGRAY);
         }
 
         questLog.DrawTracker(screenWidth);
+        chatBox.Draw(screenWidth, screenHeight);
         inventory.Draw(screenWidth, screenHeight);
         questLog.DrawJournal(screenWidth, screenHeight);
         EndDrawing();

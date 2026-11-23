@@ -1,22 +1,22 @@
 #include "player.hpp"
 #include <algorithm>
 
-Player::Player(const std::string& name, int maxHp)
+Player::Player(const std::string& name, int maxEnergy)
     : username(name),
-      _hp(maxHp),
-      _maxHp(maxHp),
+      _energy(maxEnergy),
+      _maxEnergy(maxEnergy),
       _level(1),
       _xp(0),
       _bonusDamage(0) {}
 
-void Player::takeDamage(int amount) {
+void Player::consumeEnergy(int amount) {
     if (amount <= 0) return;
-    _hp = std::max(0, _hp - amount);
+    _energy = std::max(0, _energy - amount);
 }
 
-void Player::heal(int amount) {
+void Player::restoreEnergy(int amount) {
     if (amount < 0) return;
-    _hp = std::min(_maxHp, _hp + amount);
+    _energy = std::min(_maxEnergy, _energy + amount);
 }
 
 void Player::addXp(int amount) {
@@ -26,7 +26,6 @@ void Player::addXp(int amount) {
     while (_xp >= xpForNextLevel()) {
         _xp -= xpForNextLevel();
         _level++;
-        _maxHp += 10;
-        _hp = _maxHp;
+        _maxEnergy += 10;
     }
 }
