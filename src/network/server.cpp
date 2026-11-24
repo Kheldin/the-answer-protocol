@@ -25,7 +25,7 @@ Server::Server() {
   // AF_INET: IPv4 protocol
   // SOCK_STREAM: 2-way connection-based byte streams
   errno = 0;
-  sockfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+  int sockfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
   int opt{1};
   if (sockfd == -1 ||
       setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) != 0) {
@@ -74,7 +74,7 @@ void Server::remove_client(int fd) {
 
 void Server::start_listening() {
   errno = 0;
-  if (listen(sockfd, 5) == -1) {
+  if (listen(clients_poll.at(0).fd, 5) == -1) {
     throw std::runtime_error("listen() failed.");
   }
   logger.log(LogLevel::Info, "Server is listening.");
@@ -86,7 +86,7 @@ void Server::accept_new_client() {
   // Ask the kernel to check POLLIN event.
   // Add it to the list so it will be watched at the next poll.
   errno = 0;
-  int clientSocket{accept(getfd(), nullptr, nullptr)};
+  int clientSocket{accept(clients_poll.at(0).fd, nullptr, nullptr)};
   if (clientSocket == -1) {
     const int err = errno;
     logger.log(LogLevel::Critical,
@@ -210,9 +210,9 @@ bool Server::receive_msg(int fd) {
     process_msg(clients.at(fd));
   }
   // Print every fd in all groups
-  for (const auto &[name, group] : groups) {
-    std::println("{}", group.members_fd);
-  }
+  // for (const auto &[name, group] : groups) {
+  //   std::println("{}", group.members_fd);
+  // }
   return (true);
 }
 

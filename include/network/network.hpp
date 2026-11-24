@@ -62,11 +62,9 @@ class Server {
 public:
   explicit Server();
   ~Server();
-  int getfd() const { return sockfd; }
   void start_listening();
   void run();
   std::vector<pollfd> clients_poll{};
-  int sockfd{-1};
   Logger logger{"logfile"};
   std::unordered_map<int, Client> clients{};
   std::unordered_map<std::string, Group> groups{};
