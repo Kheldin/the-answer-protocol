@@ -40,7 +40,7 @@ void AssetManager::LoadAll()
         { 30.0f, 960.0f, 10000.0f, 300.0f }, //wall down
         { 100.0f, 300.0f, 5.0f, 800.0f }, //wall left
         { 1510.0f, 478.0f, 1000.0f, 700.0f }, // corner right down
-        { 1072.0f, 295.0f, 10000.0f, 100.0f }, // corner right down
+        { 700.0f, 295.0f, 1000.0f, 100.0f }, // corner right up
         { 104.0f, 734.0f, 720.0f, 500.0f }, // corner left down
         { 276.0f, 297.0f, 630.0f, 110.0f }, // sofa up
     };
