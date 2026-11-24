@@ -191,6 +191,9 @@ bool Server::receive_msg(int fd) {
   if (check == 0) {
     logger.log(LogLevel::Info, "Player {} disconnected properly.",
                client.player.username);
+    if (!client.player.group.empty()) {
+      groups.at(client.player.group).members_fd.erase(fd);
+    }
     client.state = ConState::Terminated;
     return (false);
   } else if (check < 0) {
@@ -205,6 +208,10 @@ bool Server::receive_msg(int fd) {
   } else {
     client.buffer.append(buffer, check);
     process_msg(clients.at(fd));
+  }
+  // Print every fd in all groups
+  for (const auto &[name, group] : groups) {
+    std::println("{}", group.members_fd);
   }
   return (true);
 }

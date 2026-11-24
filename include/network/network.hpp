@@ -60,7 +60,7 @@ private:
 
 class Server {
 public:
-  Server();
+  explicit Server();
   ~Server();
   int getfd() const { return sockfd; }
   void start_listening();
