@@ -70,7 +70,6 @@ void Server::remove_client(int fd) {
   // Delete le fd des groupes aussi
   // Et je dois delete aussi dans le clients_poll je pense ?
   clients.erase(fd);
-  ::close(fd);
 }
 
 void Server::start_listening() {
@@ -257,7 +256,7 @@ void Server::run() {
           if (!receive_msg(clients_poll.at(i).fd)) {
             close(clients_poll[i].fd);
             clients_poll.erase(clients_poll.begin() + i);
-            clients.erase(clients.at(i).fd);
+            remove_client(clients_poll[i].fd);
             i--;
           }
         }
@@ -282,13 +281,14 @@ int main(void) {
     std::cerr << "sigaction error" << "\n";
     return (EXIT_FAILURE);
   }
-  try {
-    Server server{};
-    server.start_listening();
-    server.run();
-    return (EXIT_SUCCESS);
-  } catch (std::exception &e) {
-    std::println(std::cerr, "A standard exception was caught, with message: {}",
-                 e.what());
-  }
+  // try {
+  Server server{};
+  server.start_listening();
+  server.run();
+  return (EXIT_SUCCESS);
+  // } catch (std::exception &e) {
+  //   std::println(std::cerr, "A standard exception was caught, with message:
+  //   {}",
+  //                e.what());
+  // }
 }
