@@ -7,7 +7,8 @@ public:
     Player() = default;
     Player(const std::string& name, int maxEnergy = 100);
 
-    std::string username{};
+  std::string username{};
+  std::string group{};
 
     const std::string& getName() const { return username; }
     void setName(const std::string& name) { username = name; }

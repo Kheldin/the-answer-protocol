@@ -2,6 +2,7 @@
 #include "utils/logger.hpp"
 #include <string_view>
 #include <sys/socket.h>
+#include <unordered_map>
 
 void Server::group(Client &client, Command &command) {
   if (command.payload.starts_with("CREATE ")) {
@@ -14,20 +15,19 @@ void Server::group(Client &client, Command &command) {
 void Server::group_create(Client &client, Command &command) {
   static constexpr std::string_view already_taken{
       "ERR204 GROUP_NAME_ALREADY_TAKEN"};
-  std::string_view name{
+  std::string name{
       command.payload.substr(7)}; // 7 = "CREATE".size() + whitespace
-  for (Group group : groups) {
-    if (group.name == name) {
-      ::send(client.fd, already_taken.data(), already_taken.size(),
-             MSG_DONTWAIT | MSG_NOSIGNAL);
-      logger.log(LogLevel::Warning, "Player {}: {}", client.player.username,
-                 already_taken);
-      return;
-    }
+  if (groups.contains(name)) {
+    ::send(client.fd, already_taken.data(), already_taken.size(),
+           MSG_DONTWAIT | MSG_NOSIGNAL);
+    logger.log(LogLevel::Warning, "Player {}: {}", client.player.username,
+               already_taken);
+    return;
   }
   std::string res{"OK group="};
   res += name;
-  groups.emplace_back(name);
+  groups.try_emplace(name, name, client.fd);
+  client.player.group = name;
   ::send(client.fd, res.data(), res.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Info, "Player {}: {}", client.player.username, res);
 }
