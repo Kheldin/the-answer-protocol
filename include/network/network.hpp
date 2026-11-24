@@ -75,6 +75,7 @@ private:
   void accept_new_client();
   void add_client(int fd);
   void remove_client(int fd);
+  void send_not_auth_err(int fd);
   bool receive_msg(int fd);
   void process_msg(Client &client);
   void send_unknown_command(Client &client);

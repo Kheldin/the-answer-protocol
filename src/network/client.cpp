@@ -17,10 +17,12 @@ int main(void) {
   ssize_t check = ::recv(clientSocket, buffer, sizeof(buffer), 0);
   std::string command{buffer, (size_t)check};
   std::print("response: {}", command);
-  const char *message = "CONNECT Pierre\n";
+  const char *message = "CONNECT Jeanpierre\n";
   const char *message2 = "GROUP CREATE Karmine\n";
   send(clientSocket, message, strlen(message), 0);
-  check = ::recv(clientSocket, buffer, sizeof(buffer), 0);
+  int check3 = ::recv(clientSocket, buffer, sizeof(buffer), 0);
+  std::string command3{buffer, (size_t)check3};
+  std::print("response: {}\n", command3);
 
   send(clientSocket, message2, strlen(message2), 0);
   int check2 = recv(clientSocket, buffer, sizeof(buffer), 0);
