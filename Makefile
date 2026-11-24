@@ -13,8 +13,8 @@ SERVER_SRCS = src/network/server.cpp src/utils/logger.cpp src/network/server_com
 CLI_SRCS    = src/network/client.cpp
 GUI_SRCS	= src/gui/client_gui.cpp src/gui/asset_manager.cpp src/gui/button.cpp \
 			  src/gui/room.cpp src/gui/inventory.cpp src/gui/item.cpp src/gui/quest.cpp \
-			  src/gui/quest_log.cpp src/player.cpp
-
+			  src/gui/quest_log.cpp src/player.cpp src/gui/world_controller.cpp src/gui/mini_games.cpp \
+			  src/gui/hud_renderer.cpp src/gui/game_app.cpp
 
 SERVER_OBJS = $(SERVER_SRCS:%.cpp=$(OBJ_DIR)/%.o)
 CLI_OBJS    = $(CLI_SRCS:%.cpp=$(OBJ_DIR)/%.o)
