@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 void Server::dispatch_command(Client &client, Command &command) {
+  logger.log(LogLevel::Debug, "{} {} ", command.type, command.payload);
   if (command.type != "CONNECT" && client.state != ConState::Authenticated) {
     send_not_auth_err(client.fd);
     return;
@@ -21,6 +22,8 @@ void Server::dispatch_command(Client &client, Command &command) {
     who(client, command);
   } else if (command.type == "GROUP") {
     group(client, command);
+  } else {
+    send_unknown_command(client);
   }
   return;
 }
