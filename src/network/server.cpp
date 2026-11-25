@@ -1,5 +1,6 @@
 #include "network/network.hpp"
 #include "utils/logger.hpp"
+#include <arpa/inet.h>
 #include <atomic>
 #include <cerrno>
 #include <csignal>
@@ -17,7 +18,6 @@
 #include <sys/socket.h>
 #include <system_error>
 #include <unistd.h>
-
 static constexpr std::array<std::string_view, 5> COMMANDS{
     "CONNECT", "LOOK", "QUIT", "WHO", "GROUP"};
 std::atomic<bool> is_running{false};
@@ -25,25 +25,27 @@ Server::Server() {
   // AF_INET: IPv4 protocol
   // SOCK_STREAM: 2-way connection-based byte streams
   errno = 0;
+
   int sockfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
   int opt{1};
   if (sockfd == -1 ||
       setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) != 0) {
     throw std::runtime_error("socket() failed.");
   }
-  sockaddr_in serverAddress{};
+  sockaddr_in server_address{};
+  socklen_t addr_len = sizeof(server_address);
   // sin_family: The address family for the transport address. This member
   // should always be set to AF_INET.
-  serverAddress.sin_family = AF_INET;
+  server_address.sin_family = AF_INET;
   // sin_port: A transport protocol port number.
   // htons: Convert a uint16 host endian into the network endian.
-  serverAddress.sin_port = htons(8080);
+  server_address.sin_port = htons(8080);
   // sin_addr: An IN_ADDR structure that contains an IPv4 transport address.
   // INADDR_ANY: A wildcard.
-  serverAddress.sin_addr.s_addr = INADDR_ANY;
+  server_address.sin_addr.s_addr = INADDR_ANY;
   // Assign the Address to the socket.
-  if (bind(sockfd, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) ==
-      -1) {
+  if (bind(sockfd, (struct sockaddr *)&server_address,
+           sizeof(server_address)) == -1) {
     throw std::runtime_error("bind() failed.");
   }
   pollfd monitor{};
@@ -51,7 +53,11 @@ Server::Server() {
   monitor.events = POLLIN;
   monitor.revents = 0;
   clients_poll.emplace_back(monitor);
-  add_client(monitor.fd);
+  char buf[INET6_ADDRSTRLEN] = "";
+  ::getpeername(sockfd, (struct sockaddr *)&server_address, &addr_len);
+  ::inet_ntop(AF_INET, &server_address.sin_addr, buf, sizeof(buf));
+
+  add_client(monitor.fd, static_cast<std::string>(buf));
 }
 
 Server::~Server() {
@@ -65,10 +71,12 @@ Server::~Server() {
   }
 }
 
-void Server::add_client(int fd) { clients.try_emplace(fd, fd); }
+void Server::add_client(int fd, std::string ipv4) {
+  clients.try_emplace(fd, fd, ipv4);
+}
 void Server::remove_client(int fd) {
-  // Delete le fd des groupes aussi
   // Et je dois delete aussi dans le clients_poll je pense ?
+  logger.log(LogLevel::Info, "{} disconnected.", clients.at(fd).ipv4);
   clients.erase(fd);
 }
 
@@ -86,7 +94,13 @@ void Server::accept_new_client() {
   // Ask the kernel to check POLLIN event.
   // Add it to the list so it will be watched at the next poll.
   errno = 0;
-  int clientSocket{accept(clients_poll.at(0).fd, nullptr, nullptr)};
+
+  // struct that represent IPv4 adresses
+  struct sockaddr_in client_addr;
+  socklen_t addr_len = sizeof(client_addr);
+
+  int clientSocket{accept(clients_poll.at(0).fd,
+                          (struct sockaddr *)&client_addr, &addr_len)};
   if (clientSocket == -1) {
     const int err = errno;
     logger.log(LogLevel::Critical,
@@ -99,13 +113,17 @@ void Server::accept_new_client() {
   pollstruct.events = POLLIN;
   pollstruct.revents = 0;
   pollstruct.fd = clientSocket;
-  add_client(clientSocket);
   clients_poll.emplace_back(pollstruct);
 
+  char buf[INET6_ADDRSTRLEN] = "";
+  ::getpeername(clientSocket, (struct sockaddr *)&client_addr, &addr_len);
+  ::inet_ntop(AF_INET, &client_addr.sin_addr, buf, sizeof(buf));
+  std::string ipv4{buf};
+  add_client(clientSocket, ipv4);
   static constexpr std::string_view greeting = "OK hello proto=1\n";
   ::send(clientSocket, greeting.data(), greeting.size(),
          MSG_DONTWAIT | MSG_NOSIGNAL);
-  logger.log(LogLevel::Info, "New client accepted.");
+  logger.log(LogLevel::Info, "New client accepted. IP: {}", ipv4);
 }
 
 std::string_view Command::extract_command_type(std::string_view buffer) {

@@ -18,8 +18,9 @@ enum class ConState { Disconnected, Connected, Authenticated, Terminated };
 
 class Client {
 public:
-  explicit Client(int p_fd) {
+  explicit Client(int p_fd, std::string p_ipv4) {
     fd = p_fd;
+    ipv4 = p_ipv4;
     buffer.reserve(BUFFER_SIZE);
   }
   // Client(const Client &) = delete;
@@ -27,9 +28,11 @@ public:
   // Client(Client &&) noexcept = default;
   // Client &operator=(Client &&) noexcept = default;
   int fd{};
+  std::string ipv4{};
   std::string buffer{};
   ConState state{ConState::Connected};
   Player player{};
+  std::string ip{};
 
 private:
 };
@@ -71,7 +74,7 @@ public:
 
 private:
   void accept_new_client();
-  void add_client(int fd);
+  void add_client(int fd, std::string ipv4);
   void remove_client(int fd);
   void send_not_auth_err(int fd);
   bool receive_msg(int fd);
