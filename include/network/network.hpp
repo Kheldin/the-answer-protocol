@@ -14,8 +14,9 @@
 #include <vector>
 #define BUFFER_SIZE 22 // 1023 "effective" bytes to keep the 1024th for the \0
 
-enum class ConState { Disconnected, Connected, Authenticated, Terminated };
+constexpr int MAX_CLIENTS_IN_QUEUE{5};
 
+enum class ConState { Disconnected, Connected, Authenticated, Terminated };
 class Client {
 public:
   explicit Client(int p_fd, std::string p_ipv4) {

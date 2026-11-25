@@ -82,7 +82,7 @@ void Server::remove_client(int fd) {
 
 void Server::start_listening() {
   errno = 0;
-  if (listen(clients_poll.at(0).fd, 5) == -1) {
+  if (listen(clients_poll.at(0).fd, MAX_CLIENTS_IN_QUEUE) == -1) {
     throw std::runtime_error("listen() failed.");
   }
   logger.log(LogLevel::Info, "Server is listening.");
