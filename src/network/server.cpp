@@ -73,9 +73,17 @@ Server::~Server() {
 
 void Server::add_client(int fd, std::string ipv4) {
   clients.try_emplace(fd, fd, ipv4);
+  // We do not log the server itself as a new client.
+  if (clients_poll[0].fd == fd) {
+    return;
+  }
+  logger.log(LogLevel::Info, "New client accepted. IP: {}",
+             clients.at(fd).ipv4);
 }
+
 void Server::remove_client(int fd) {
   // Et je dois delete aussi dans le clients_poll je pense ?
+
   logger.log(LogLevel::Info, "{} disconnected.", clients.at(fd).ipv4);
   clients.erase(fd);
 }
@@ -123,7 +131,6 @@ void Server::accept_new_client() {
   static constexpr std::string_view greeting = "OK hello proto=1\n";
   ::send(clientSocket, greeting.data(), greeting.size(),
          MSG_DONTWAIT | MSG_NOSIGNAL);
-  logger.log(LogLevel::Info, "New client accepted. IP: {}", ipv4);
 }
 
 std::string_view Command::extract_command_type(std::string_view buffer) {
