@@ -17,7 +17,7 @@ void Server::group(Client &client, Command &command) {
 
 void Server::group_create(Client &client, Command &command) {
   static constexpr std::string_view already_taken{
-      "ERR204 GROUP_NAME_ALREADY_TAKEN"};
+      "ERR204 GROUP_NAME_ALREADY_TAKEN\n"};
   std::string name{
       command.payload.substr(7)}; // 7 = "CREATE".size() + whitespace
   if (groups.contains(name)) {
@@ -27,8 +27,7 @@ void Server::group_create(Client &client, Command &command) {
                already_taken);
     return;
   }
-  std::string res{"OK group="};
-  res += name;
+  std::string res{std::format("OK group={}\n", name)};
   groups.try_emplace(name, name, client.fd);
   client.player.group = name;
   ::send(client.fd, res.data(), res.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
@@ -45,7 +44,7 @@ int Server::retrieve_fd_by_username(std::string_view username) {
 }
 
 void Server::send_invite(Client &client, Client &target) {
-  std::string msg{std::format("{} invited you to join {} group.",
+  std::string msg{std::format("GROUP INVITE BY {} GROUP {}\n",
                               client.player.username, client.player.group)};
   ::send(target.fd, msg.data(), msg.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Info, "Player {}: {}", target.player.username, msg);
@@ -53,8 +52,8 @@ void Server::send_invite(Client &client, Client &target) {
 
 void Server::group_invite(Client &client, Command &command) {
   static constexpr std::string_view player_not_connected{
-      "ERR 206 PLAYER_NOT_CONNECTED"};
-  static constexpr std::string_view not_in_group{"ERR 207 NOT_IN_GROUP"};
+      "ERR 206 PLAYER_NOT_CONNECTED\n"};
+  static constexpr std::string_view not_in_group{"ERR 207 NOT_IN_GROUP\n"};
 
   if (client.player.group.empty()) {
     ::send(client.fd, not_in_group.data(), not_in_group.size(),
@@ -70,7 +69,7 @@ void Server::group_invite(Client &client, Command &command) {
     return;
   }
   Client target{clients.at(fd)};
-  ::send(client.fd, "OK", sizeof("OK"), MSG_DONTWAIT | MSG_NOSIGNAL);
+  ::send(client.fd, "OK\n", sizeof("OK\n"), MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Info, "Player {}: OK", client.player.username);
   send_invite(client, target);
 }
