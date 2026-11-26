@@ -18,9 +18,12 @@
 #include <sys/socket.h>
 #include <system_error>
 #include <unistd.h>
+
 static constexpr std::array<std::string_view, 5> COMMANDS{
     "CONNECT", "LOOK", "QUIT", "WHO", "GROUP"};
+
 std::atomic<bool> is_running{false};
+
 Server::Server() {
   // AF_INET: IPv4 protocol
   // SOCK_STREAM: 2-way connection-based byte streams
@@ -77,14 +80,14 @@ void Server::add_client(int fd, std::string ipv4) {
   if (clients_poll[0].fd == fd) {
     return;
   }
-  logger.log(LogLevel::Info, "New client accepted. IP: {}",
+  logger.log(LogLevel::Info, "New client accepted. IP: {}\n",
              clients.at(fd).ipv4);
 }
 
 void Server::remove_client(int fd) {
   // Et je dois delete aussi dans le clients_poll je pense ?
 
-  logger.log(LogLevel::Info, "{} disconnected.", clients.at(fd).ipv4);
+  logger.log(LogLevel::Info, "{} disconnected.\n", clients.at(fd).ipv4);
   clients.erase(fd);
 }
 
@@ -93,7 +96,7 @@ void Server::start_listening() {
   if (listen(clients_poll.at(0).fd, MAX_CLIENTS_IN_QUEUE) == -1) {
     throw std::runtime_error("listen() failed.");
   }
-  logger.log(LogLevel::Info, "Server is listening.");
+  logger.log(LogLevel::Info, "Server is listening.\n");
   is_running = true;
 }
 
@@ -112,11 +115,11 @@ void Server::accept_new_client() {
   if (clientSocket == -1) {
     const int err = errno;
     logger.log(LogLevel::Critical,
-               "An error happened when accepting new client: {}",
+               "An error happened when accepting new client: {}\n",
                std::generic_category().message(err));
     return;
   }
-  logger.log(LogLevel::Info, "New connection request.");
+  logger.log(LogLevel::Info, "New connection request.\n");
   pollfd pollstruct{};
   pollstruct.events = POLLIN;
   pollstruct.revents = 0;
@@ -158,7 +161,7 @@ std::string_view Command::extract_command_payload(std::string_view buffer) {
 
 void Server::send_unknown_command(Client &client) {
   static constexpr std::string_view unknown_command{
-      "500 Unknown or malformed command."};
+      "500 Unknown or malformed command.\n"};
   ::send(client.fd, unknown_command.data(), unknown_command.size(),
          MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Warning, "{}", unknown_command);
@@ -200,8 +203,6 @@ void Server::process_msg(Client &client) {
       send_unknown_command(client);
     }
   }
-  logger.log(LogLevel::Debug, "Buffer of client after process last msg: {}",
-             client.buffer);
   return;
 }
 
@@ -214,7 +215,7 @@ bool Server::receive_msg(int fd) {
   errno = 0;
   check = ::recv(clients.at(fd).fd, buffer, sizeof(buffer), MSG_DONTWAIT);
   if (check == 0) {
-    logger.log(LogLevel::Info, "Player {} disconnected properly.",
+    logger.log(LogLevel::Info, "Player {} disconnected properly.\n",
                client.player.username);
     if (!client.player.group.empty()) {
       groups.at(client.player.group).members_fd.erase(fd);
@@ -227,8 +228,8 @@ bool Server::receive_msg(int fd) {
     if (errno == EWOULDBLOCK || errno == EAGAIN) {
       return (true);
     }
-    logger.log(LogLevel::Error, "Client: {}.", fd);
-    logger.log(LogLevel::Error, "{}", std::strerror(errno));
+    logger.log(LogLevel::Error, "Client: {}.\n", fd);
+    logger.log(LogLevel::Error, "{}\n", std::strerror(errno));
     return (false);
   } else {
     client.buffer.append(buffer, check);
@@ -254,10 +255,10 @@ void Server::run() {
     if (::poll(clients_poll.data(), clients_poll.size(), -1) < 0) {
       if (errno == EINTR) {
         logger.log(LogLevel::Warning,
-                   "A signal occurred before any requested event");
+                   "A signal occurred before any requested event.\n");
       } else {
         const int err = errno;
-        logger.log(LogLevel::Critical, "Error on poll(): {}",
+        logger.log(LogLevel::Critical, "Error on poll(): {}\n",
                    std::generic_category().message(err));
         is_running = false;
       }
@@ -268,10 +269,10 @@ void Server::run() {
       const int err{errno};
       if (clients_poll[i].revents & (POLLERR | POLLNVAL | POLLHUP)) {
         if (clients_poll[i].revents & POLLHUP) {
-          logger.log(LogLevel::Info, "Connection terminated for fd {}",
+          logger.log(LogLevel::Info, "Connection terminated for fd {}\n",
                      clients_poll[i].fd);
         } else {
-          logger.log(LogLevel::Critical, "Error on fd {}: {}",
+          logger.log(LogLevel::Critical, "Error on fd {}: {}\n",
                      clients_poll[i].fd, std::generic_category().message(err));
         }
         close(clients_poll[i].fd);

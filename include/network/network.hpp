@@ -87,4 +87,7 @@ private:
   void who(Client &client, Command &command);
   void group(Client &client, Command &command);
   void group_create(Client &client, Command &command);
+  void group_invite(Client &client, Command &command);
+  int retrieve_fd_by_username(std::string_view username);
+  void send_invite(Client &client, Client &target);
 };
