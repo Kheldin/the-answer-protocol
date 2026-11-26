@@ -215,7 +215,7 @@ bool Server::receive_msg(int fd) {
   errno = 0;
   check = ::recv(clients.at(fd).fd, buffer, sizeof(buffer), MSG_DONTWAIT);
   if (check == 0) {
-    logger.log(LogLevel::Info, "Player {} disconnected properly.",
+    logger.log(LogLevel::Info, "Player {} disconnected properly.\n",
                client.player.username);
     if (!client.player.group.empty()) {
       groups.at(client.player.group).members_fd.erase(fd);

@@ -44,7 +44,7 @@ int Server::retrieve_fd_by_username(std::string_view username) {
 }
 
 void Server::send_invite(Client &client, Client &target) {
-  std::string msg{std::format("GROUP INVITE BY {} GROUP {}\n",
+  std::string msg{std::format("GROUP INVITE BY {} - {}\n",
                               client.player.username, client.player.group)};
   ::send(target.fd, msg.data(), msg.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Info, "Player {}: {}", target.player.username, msg);
@@ -62,14 +62,17 @@ void Server::group_invite(Client &client, Command &command) {
                not_in_group);
     return;
   }
-  int fd = retrieve_fd_by_username(command.payload);
+  std::string_view target_username{command.payload.substr(7)};
+  int fd = retrieve_fd_by_username(target_username);
   if (fd == -1) {
     ::send(client.fd, player_not_connected.data(), player_not_connected.size(),
            MSG_NOSIGNAL | MSG_DONTWAIT);
+    logger.log(LogLevel::Info, "Player {}: {}", client.player.username,
+               player_not_connected);
     return;
   }
   Client target{clients.at(fd)};
   ::send(client.fd, "OK\n", sizeof("OK\n"), MSG_DONTWAIT | MSG_NOSIGNAL);
-  logger.log(LogLevel::Info, "Player {}: OK", client.player.username);
+  logger.log(LogLevel::Info, "Player {}: OK\n", client.player.username);
   send_invite(client, target);
 }
