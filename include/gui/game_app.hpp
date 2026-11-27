@@ -9,15 +9,16 @@
 #include "gui/world_controller.hpp"
 #include "gui/game_types.hpp"
 #include "player.hpp"
+#include "cli/cli.hpp"
 #include <vector>
 #include <string>
 #include <memory>
 
 class GameApp {
 public:
-    void Init();
+    bool Init(const std::string& ip = "127.0.0.1", int port = 8080, const std::string& username = "Antoine");
     void Update(float dt);
-    void Draw() ;
+    void Draw();
     void Shutdown();
 
     void sendNetworkCommand(const std::string& cmd);
@@ -27,11 +28,15 @@ public:
     ChatBox& getChatBox() { return _chatBox; }
 
 private:
+    void pollServerMessages();
+    static Rooms parseProtocolRoom(const std::string& roomName);
+
     int _screenWidth{800};
     int _screenHeight{450};
 
     AssetManager _manager;
     std::unique_ptr<Inventory> _inventory;
+    std::unique_ptr<Cli> _cli;
     Player _player{"Antoine", 100};
     QuestLog _questLog;
     ChatBox _chatBox;

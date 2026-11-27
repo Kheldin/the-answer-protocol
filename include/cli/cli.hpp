@@ -3,6 +3,8 @@
 #include <string>
 #include <thread>
 #include <atomic>
+#include <queue>
+#include <mutex>
 
 class Cli {
 public:
@@ -10,13 +12,21 @@ public:
     ~Cli();
     void run();
 
+    // Méthodes utilisées par GameApp (sans appeler run())
+    void sendToServer(const std::string& msg);
+    bool popReceivedMessage(std::string& outMsg);
+    bool isConnected() const { return fd != -1 && isRunning; }
+
 private:
     int fd{-1};
     std::atomic<bool> isRunning{true};
     std::thread listenerThread;
+
+    std::mutex queueMutex;
+    std::queue<std::string> incomingMessages;
+    std::string recvBuffer;
     
     void parseCommand(const std::string& input);
-    void sendToServer(const std::string& msg);
     void listenToServer();
     
     void cmdConnect(const std::string& args);

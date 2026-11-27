@@ -10,11 +10,11 @@ GUIFLAGS		= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 OBJ_DIR     = obj
 
 SERVER_SRCS = src/network/server.cpp src/utils/logger.cpp src/network/server_commands.cpp src/utils/utils.cpp src/network/group_commands.cpp
-CLI_SRCS    = src/cli/cli_client.cpp
+CLI_SRCS    = src/cli/cli_client.cpp src/cli/cli_main.cpp
 GUI_SRCS	= src/gui/client_gui.cpp src/gui/asset_manager.cpp src/gui/button.cpp \
 			  src/gui/room.cpp src/gui/inventory.cpp src/gui/item.cpp src/gui/quest.cpp \
 			  src/gui/quest_log.cpp src/player.cpp src/gui/world_controller.cpp src/gui/mini_games.cpp \
-			  src/gui/hud_renderer.cpp src/gui/game_app.cpp
+			  src/gui/hud_renderer.cpp src/gui/game_app.cpp src/cli/cli_client.cpp
 
 SERVER_OBJS = $(SERVER_SRCS:%.cpp=$(OBJ_DIR)/%.o)
 CLI_OBJS    = $(CLI_SRCS:%.cpp=$(OBJ_DIR)/%.o)
@@ -56,4 +56,4 @@ re: fclean all
 
 -include $(DEPS)
 
-.PHONY: all clean fclean re run-server run-cli
+.PHONY: all clean fclean re run-server run-cli run-gui

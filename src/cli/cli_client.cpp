@@ -19,7 +19,7 @@ Cli::Cli(const std::string &ip, int port) {
   inet_pton(AF_INET, ip.c_str(), &serverAddr.sin_addr);
 
   if (connect(fd, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) == -1) {
-    std::cerr << "Error: connection to server failed.\n";
+    std::cerr << "Error: connection to server failed.\nTry make-server before.\n";
     close(fd);
     fd = -1;
     isRunning = false;
@@ -101,7 +101,7 @@ void Cli::parseCommand(const std::string &input) {
   else if (cmd == "QUIT" || cmd == "exit")
     cmdQuit();
   else {
-    std::cout << "Unknown command.\n";
+    std::cout << "<" << cmd<< ">" << "Unknown command.\n";
   }
 }
 
@@ -141,16 +141,16 @@ void Cli::listenToServer() {
 
 void Cli::cmdConnect(const std::string &args) { sendToServer("CONNECT " + args); }
 void Cli::cmdLook(const std::string &args)    { sendToServer(args.empty() ? "LOOK" : "LOOK " + args); }
-void Cli::cmdMove(const std::string &args)    { if (!args.empty()) sendToServer("move " + args); }
-void Cli::cmdChat(const std::string &args)    { if (!args.empty()) sendToServer("chat " + args); }
-void Cli::cmdTake(const std::string &args)    { if (!args.empty()) sendToServer("take " + args); }
-void Cli::cmdInventory(const std::string &args) { (void)args; sendToServer("inventory"); }
-void Cli::cmdDrop(const std::string &args)    { if (!args.empty()) sendToServer("drop " + args); }
-void Cli::cmdTalk(const std::string &args)    { if (!args.empty()) sendToServer("talk " + args); }
-void Cli::cmdAttack(const std::string &args)  { if (!args.empty()) sendToServer("attack " + args); }
-void Cli::cmdStatus(const std::string &args)  { (void)args; sendToServer("status"); }
-void Cli::cmdQuest(const std::string &args)   { sendToServer(args.empty() ? "quest" : "quest " + args); }
-void Cli::cmdQuests(const std::string &args)  { (void)args; sendToServer("quests"); }
+void Cli::cmdMove(const std::string &args)    { if (!args.empty()) sendToServer("MOVE " + args); }
+void Cli::cmdChat(const std::string &args)    { if (!args.empty()) sendToServer("CHAT " + args); }
+void Cli::cmdTake(const std::string &args)    { if (!args.empty()) sendToServer("TAKE " + args); }
+void Cli::cmdInventory(const std::string &args) { (void)args; sendToServer("INVENTORY"); }
+void Cli::cmdDrop(const std::string &args)    { if (!args.empty()) sendToServer("DROP " + args); }
+void Cli::cmdTalk(const std::string &args)    { if (!args.empty()) sendToServer("TALK " + args); }
+void Cli::cmdAttack(const std::string &args)  { if (!args.empty()) sendToServer("ATTACK " + args); }
+void Cli::cmdStatus(const std::string &args)  { (void)args; sendToServer("STATUS"); }
+void Cli::cmdQuest(const std::string &args)   { sendToServer(args.empty() ? "QUEST" : "QUEST " + args); }
+void Cli::cmdQuests(const std::string &args)  { (void)args; sendToServer("QUESTS"); }
 void Cli::cmdWho(const std::string &args)     { (void)args; sendToServer("WHO"); }
 void Cli::cmdGroup(const std::string &args)   { sendToServer(args.empty() ? "GROUP" : "GROUP " + args); }
 void Cli::cmdQuit()                           { sendToServer("QUIT"); isRunning = false; }

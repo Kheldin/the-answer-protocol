@@ -1,7 +1,17 @@
 #include "gui/game_app.hpp"
 #include "gui/hud_renderer.hpp"
+#include <iostream>
+#include <sstream>
 
-void GameApp::Init() {
+bool GameApp::Init(const std::string& ip, int port, const std::string& username) {
+    _cli = std::make_unique<Cli>(ip, port);
+    if (!_cli->isConnected()) {
+        std::cerr << "Error: cannot connect to server " << ip << ":" << port << "\n";
+        return false;
+    }
+
+    _player = Player(username, 100);
+
     SetConfigFlags(FLAG_WINDOW_TOPMOST | FLAG_WINDOW_UNDECORATED);
     InitWindow(_screenWidth, _screenHeight, "TAP - Gym Adventure");
 
@@ -16,17 +26,58 @@ void GameApp::Init() {
     _inventory = std::make_unique<Inventory>(_manager);
     _miniGames.Init(_manager);
     _world.Init(_manager, _screenWidth, _screenHeight);
+
+    _cli->sendToServer("CONNECT " + username);
+    _cli->sendToServer("LOOK");
+    _chatBox.AddSystemMessage("Connecte au serveur " + ip + ":" + std::to_string(port));
+    return true;
 }
 
 void GameApp::sendNetworkCommand(const std::string& cmd) {
     if (cmd.empty()) return;
 
+    std::string serverCmd = cmd;
+
+    // ChatBox émet "say <msg>", le serveur attend "chat <msg>"
     if (cmd.rfind("say ", 0) == 0) {
-        _chatBox.AddMessage(_player.getName(), cmd.substr(4), WHITE);
+        std::string msg = cmd.substr(4);
+        _chatBox.AddMessage(_player.getName(), msg, WHITE);
+        serverCmd = "chat " + msg;
+    } else if (cmd.rfind("whisper ", 0) == 0) {
+        serverCmd = "chat " + cmd;
     } else {
-        _chatBox.AddSystemMessage("CMD -> " + cmd);
+        _chatBox.AddSystemMessage("CMD -> " + serverCmd);
     }
-    // TODO (branche réseau) : envoyer `cmd` au serveur TCP
+
+    if (_cli && _cli->isConnected()) {
+        _cli->sendToServer(serverCmd);
+    }
+}
+
+Rooms GameApp::parseProtocolRoom(const std::string& roomName) {
+    if (roomName == "locker_room") return Rooms::LockerRoom;
+    if (roomName == "muscu")       return Rooms::Muscu;
+    if (roomName == "cardio")      return Rooms::Cardio;
+    if (roomName == "pool")        return Rooms::Pool;
+    if (roomName == "climbing")    return Rooms::Climbing;
+    if (roomName == "sauna")       return Rooms::Sauna;
+    if (roomName == "massage")     return Rooms::Masage;
+    return Rooms::Reception;
+}
+
+void GameApp::pollServerMessages() {
+    if (!_cli) return;
+
+    std::string line;
+    while (_cli->popReceivedMessage(line)) {
+        if (line.rfind("OK ", 0) == 0) {
+            _chatBox.AddSystemMessage(line.substr(3));
+        } else if (line.rfind("ERR ", 0) == 0) {
+            _chatBox.AddSystemMessage("Erreur serveur : " + line);
+        } else {
+            _chatBox.AddSystemMessage(line);
+        }
+    }
 }
 
 void GameApp::spawnDroppedItem(const std::string& rawName, Rooms room, Vector2 dropPos) {
@@ -80,11 +131,12 @@ void GameApp::removeRemotePlayer(const std::string& username) {
 }
 
 void GameApp::Update(float dt) {
+    pollServerMessages();
+
     if (_lowEnergyTimer > 0.0f) _lowEnergyTimer -= dt;
 
     auto sendCb = [this](const std::string& c) { sendNetworkCommand(c); };
 
-    // 1. Chat
     bool canOpenChat = !_miniGames.IsAnyActive() && !_inventory->IsOpen() && !_questLog.IsOpen();
     std::string chatCmd = _chatBox.Update(canOpenChat);
     if (!chatCmd.empty()) sendNetworkCommand(chatCmd);
@@ -92,11 +144,9 @@ void GameApp::Update(float dt) {
     bool isChatFocused = _chatBox.IsFocused();
     bool canOpenMenu = !canOpenChat ? false : (!isChatFocused && !_world.IsTalking());
 
-    // 2. Ouverture Inventaire / Quêtes
     if (canOpenMenu && !_questLog.IsOpen() && IsKeyPressed(KEY_I)) _inventory->Toggle();
     if (canOpenMenu && !_inventory->IsOpen() && IsKeyPressed(KEY_Q)) _questLog.Toggle();
 
-    // 3. Modales prioritaires (Inventaire, Quêtes, Mini-jeux)
     if (_inventory->IsOpen()) {
         std::string cmd = _inventory->Update(GetMousePosition(), _player.energyRef(), _player.bonusDamageRef());
         if (_player.getEnergy() > _player.getMaxEnergy()) _player.energyRef() = _player.getMaxEnergy();
@@ -122,7 +172,6 @@ void GameApp::Update(float dt) {
         return;
     }
 
-    // 4. Monde & Déplacements
     bool canMoveInWorld = !isChatFocused;
     _world.Update(_screenWidth, _screenHeight, canMoveInWorld, _player, *_inventory, _questLog, _miniGames, _droppedItems, _lowEnergyTimer, sendCb);
 }
@@ -133,7 +182,6 @@ void GameApp::Draw() {
 
     _world.DrawRoom(_screenWidth, _screenHeight);
 
-    // Items au sol
     for (auto& wItem : _droppedItems) {
         if (wItem.room == currentRoom) {
             DrawTextureEx(wItem.texture, wItem.pos, 0.0f, 0.25f, WHITE);
@@ -141,16 +189,10 @@ void GameApp::Draw() {
         }
     }
 
-    // Joueurs distants
     HudRenderer::DrawRemotePlayers(_otherPlayers, currentRoom, _manager.getPlayerTextures().at("guy_front"), _world.GetPlayerScale());
 
-    // Joueur local & dialogues
-    _world.DrawPlayerAndDialogs(_screenWidth, _screenHeight, _miniGames.IsExercising(), !_miniGames.IsAnyActive());
-
-    // Mini-jeux (Shop / Exercice / Combat)
     _miniGames.Draw(_screenWidth, _screenHeight, _player);
 
-    // HUD fixe
     HudRenderer::DrawLowEnergyWarning(_screenWidth, _lowEnergyTimer);
     HudRenderer::DrawPlayerHud(_player);
     HudRenderer::DrawControlsBox(_screenHeight);
@@ -159,9 +201,14 @@ void GameApp::Draw() {
     _chatBox.Draw(_screenWidth, _screenHeight);
     _inventory->Draw(_screenWidth, _screenHeight);
     _questLog.DrawJournal(_screenWidth, _screenHeight);
+    _world.DrawPlayerAndDialogs(_screenWidth, _screenHeight, _miniGames.IsExercising(), !_miniGames.IsAnyActive());
 }
 
 void GameApp::Shutdown() {
+    if (_cli && _cli->isConnected()) {
+        _cli->sendToServer("QUIT");
+    }
+    _cli.reset();
     _manager.UnloadAll();
     CloseWindow();
 }

@@ -6,7 +6,6 @@ QuestLog::QuestLog() {
     AddQuest(Quest("protein_up", "1. Fuel the Machine", "Buy Whey Protein or Creatine\nfrom the reception shop.", 1, QuestStatus::AVAILABLE));
     AddQuest(Quest("use_bench", "2. Chest Pump", "Use the bench press machine\nin the Muscu room.", 1, QuestStatus::AVAILABLE));
     AddQuest(Quest("use_press", "3. Leg Day", "Use the leg press machine\nin the Muscu room.", 1, QuestStatus::AVAILABLE));
-    AddQuest(Quest("use_bike", "4. Cardio Warmup", "Use the exercise bike\nin the Cardio room.", 1, QuestStatus::AVAILABLE));
     AddQuest(Quest("use_treadmill", "5. Endurance Run", "Use the treadmill\nin the Cardio room.", 1, QuestStatus::AVAILABLE));
     AddQuest(Quest("take_shower", "6. Post-Workout Shower", "Take a shower in the Locker Room\nto recover energy.", 1, QuestStatus::AVAILABLE));
     AddQuest(Quest("heavy_weight", "7. Iron Challenger", "Defeat the sparring partner\nin the Muscu room.", 1, QuestStatus::AVAILABLE));

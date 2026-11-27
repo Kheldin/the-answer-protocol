@@ -17,12 +17,11 @@ void WorldController::Init(AssetManager& manager, int screenWidth, int screenHei
     _npcButton = makeBtn(1650.0f, 570.0f, "Bienvenue a la salle !\nTe voila inscrit. Va faire un tour au shop !");
     _shopButton = makeBtn(1680.0f, 120.0f, "");
     _fightButton = makeBtn(600.0f, 700.0f, "");
-    _showerButton = makeBtn(850.0f, 450.0f, "Douche prise ! (+30 Energie)");
+    _showerButton = makeBtn(50.0f, 440.0f, "Douche prise ! (+30 Energie)");
 
-    _pressButton = makeBtn(900.0f, 350.0f, "");
-    _benchButton = makeBtn(1350.0f, 450.0f, "");
-    _bikeButton = makeBtn(500.0f, 400.0f, "");
-    _treadmillButton = makeBtn(1100.0f, 400.0f, "");
+    _pressButton = makeBtn(600.0f, 110.0f, "");
+    _benchButton = makeBtn(300.0f, 130.0f, "");
+    _treadmillButton = makeBtn(500.0f, 450.0f, "");
 
     _reception = std::make_unique<Room>(manager.getReceptionTextures(), manager.getReceptionTexturesPositions(), manager.getReceptionHitboxes());
     _lockerRoom = std::make_unique<Room>(manager.getLockerRoomTextures(), manager.getLockerRoomTexturesPositions(), manager.getLockerRoomHitboxes());
@@ -68,7 +67,6 @@ void WorldController::Update(
     _fightButton->Update(playerHitbox, inMuscu);
     _pressButton->Update(playerHitbox, inMuscu);
     _benchButton->Update(playerHitbox, inMuscu);
-    _bikeButton->Update(playerHitbox, inCardio);
     _treadmillButton->Update(playerHitbox, inCardio);
 
     // Ramassage des items au sol
@@ -106,7 +104,6 @@ void WorldController::Update(
     };
     checkMachine(*_pressButton, ExerciseType::SQUATS, "use_press");
     checkMachine(*_benchButton, ExerciseType::BENCH, "use_bench");
-    checkMachine(*_bikeButton, ExerciseType::SPRINT, "use_bike");
     checkMachine(*_treadmillButton, ExerciseType::SPRINT, "use_treadmill");
 
     // Inscription accueil
@@ -198,7 +195,7 @@ void WorldController::HandleRoomTransitions() {
     switch (_currentRoom) {
         case Rooms::Reception:
             if (_destRec.y < 160 && _destRec.x > 150 && _destRec.x < 270) { _currentRoom = Rooms::LockerRoom; _destRec.x = 1650; _destRec.y = 270; }
-            if (_destRec.y < 160 && _destRec.x > 1650 && _destRec.x < 1850) { _currentRoom = Rooms::Muscu; _destRec.x = 5; }
+            if (_destRec.y < 160 && _destRec.x > 1650 && _destRec.x < 1850) { _currentRoom = Rooms::Muscu; _destRec.x = 100; _destRec.y = 170; }
             _scale = 0.6f;
             break;
         case Rooms::LockerRoom:
@@ -214,26 +211,26 @@ void WorldController::HandleRoomTransitions() {
         case Rooms::Climbing:
             if (_destRec.y < 160 && _destRec.x > 150 && _destRec.x < 270) { _currentRoom = Rooms::Sauna; _destRec.x = 1650; _destRec.y = 270; }
             if (_destRec.y < 160 && _destRec.x > 1650 && _destRec.x < 1850) { _currentRoom = Rooms::Pool; _destRec.x = 250; _destRec.y = 180; }
-            _scale = 0.6f;
+            _scale = 0.8f;
             break;
         case Rooms::Sauna:
             if (_destRec.y < 160 && _destRec.x > 150 && _destRec.x < 270) { _currentRoom = Rooms::Masage; _destRec.x = 1650; _destRec.y = 270; }
-            if (_destRec.y < 160 && _destRec.x > 1650 && _destRec.x < 1850) { _currentRoom = Rooms::Climbing; _destRec.x = 5; }
+            if (_destRec.y < 160 && _destRec.x > 1550 && _destRec.x < 1750) { _currentRoom = Rooms::Climbing;  _destRec.x = 180; _destRec.y = 230; }
             _scale = 0.8f;
             break;
         case Rooms::Masage:
             if (_destRec.y < 160 && _destRec.x > 150 && _destRec.x < 270) { _currentRoom = Rooms::Cardio; _destRec.x = 1650; _destRec.y = 270; }
-            if (_destRec.y < 160 && _destRec.x > 1650 && _destRec.x < 1850) { _currentRoom = Rooms::Sauna; _destRec.x = 5; }
+            if (_destRec.y < 160 && _destRec.x > 1550 && _destRec.x < 1750) { _currentRoom = Rooms::Sauna; _destRec.x = 180; _destRec.y = 230;  }
             _scale = 0.8f;
             break;
         case Rooms::Cardio:
-            if (_destRec.y < 160 && _destRec.x > 150 && _destRec.x < 270) { _currentRoom = Rooms::Muscu; _destRec.x = 1650; _destRec.y = 270; }
-            if (_destRec.y < 160 && _destRec.x > 1650 && _destRec.x < 1850) { _currentRoom = Rooms::Masage; _destRec.x = 5; }
+            if (_destRec.y < 160 && _destRec.x > 0 && _destRec.x < 70) { _currentRoom = Rooms::Muscu; _destRec.x = 1650; _destRec.y = 270; _destRec.y = 170; }
+            if (_destRec.y < 160 && _destRec.x > 1650 && _destRec.x < 1850) { _currentRoom = Rooms::Masage; _destRec.x = 180; _destRec.y = 250;  }
             _scale = 0.6f;
             break;
         case Rooms::Muscu:
-            if (_destRec.y < 160 && _destRec.x > 150 && _destRec.x < 270) { _currentRoom = Rooms::Reception; _destRec.x = 1650; _destRec.y = 270; }
-            if (_destRec.y < 160 && _destRec.x > 1650 && _destRec.x < 1850) { _currentRoom = Rooms::Cardio; _destRec.x = 5; }
+            if (_destRec.y < 160 && _destRec.x > 0 && _destRec.x < 70) { _currentRoom = Rooms::Reception; _destRec.x = 1650; _destRec.y = 270; }
+            if (_destRec.y < 160 && _destRec.x > 1650 && _destRec.x < 1850) { _currentRoom = Rooms::Cardio; _destRec.x = 80; _destRec.y = 200;  }
             _scale = 0.6f;
             break;
     }
@@ -262,7 +259,6 @@ void WorldController::DrawRoom(int screenWidth, int screenHeight) const {
         case Rooms::Cardio:
             DrawText("Cardio", screenWidth / 2, screenHeight / 2, 50, BLACK);
             _cardio->draw();
-            _bikeButton->Draw(_buttonsTex, _bframeWidth, _bframeHeight, _cropOffset);
             _treadmillButton->Draw(_buttonsTex, _bframeWidth, _bframeHeight, _cropOffset);
             break;
         case Rooms::Climbing: _climbing->draw(); break;

@@ -54,7 +54,7 @@ private:
     int _exerciseFrame{0};
     static constexpr int EXERCISE_ENERGY_COST = 25;
 
-    // Combat QTE
+    // Fight QTE
     Texture2D _fightBgTex{};
     Texture2D _leftFightTex{};
     Texture2D _rightFightTex{};

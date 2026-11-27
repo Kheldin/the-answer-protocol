@@ -64,7 +64,7 @@ std::string Inventory::Update(Vector2 mousePos, int& playerHP, int& bonusDamage)
     const float startY = panelY + 70.0f;
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        // 1. Clic sur un slot de la grille
+        // click on a grid slot
         for (int i = 0; i < MAX_SLOTS; ++i) {
             int col = i % COLS;
             int row = i / COLS;
@@ -81,7 +81,7 @@ std::string Inventory::Update(Vector2 mousePos, int& playerHP, int& bonusDamage)
             }
         }
 
-        // 2. Clic sur les boutons USE / DROP si un objet est sélectionné
+        // use and drop button
         if (selectedIndex >= 0 && selectedIndex < static_cast<int>(_items.size())) {
             Rectangle useBtn  = { panelX + 40.0f,  panelY + panelH - 60.0f, 140.0f, 40.0f };
             Rectangle dropBtn = { panelX + 200.0f, panelY + panelH - 60.0f, 140.0f, 40.0f };
@@ -151,7 +151,7 @@ void Inventory::Draw(int screenWidth, int screenHeight) const {
                 Rectangle dst = { slotRec.x + 10.0f, slotRec.y + 10.0f, slotSize - 20.0f, slotSize - 20.0f };
                 DrawTexturePro(tex, src, dst, { 0.0f, 0.0f }, 0.0f, WHITE);
             } else {
-                // Fallback texte si la texture n'est pas encore chargée
+                // Fallback text if the the texture is unloaded.
                 std::string shortName = item.getName().substr(0, 9);
                 DrawText(shortName.c_str(), static_cast<int>(slotRec.x + 8), static_cast<int>(slotRec.y + 35), 16, WHITE);
             }

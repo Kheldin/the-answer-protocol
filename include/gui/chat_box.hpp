@@ -1,8 +1,6 @@
 #pragma once
 
 #include "raylib.h"
-#include <string>
-#include <vector>
 
 struct ChatMessage {
     std::string sender;

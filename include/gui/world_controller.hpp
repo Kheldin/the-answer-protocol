@@ -55,7 +55,7 @@ private:
 
     std::unique_ptr<Room> _reception, _lockerRoom, _muscu, _cardio, _pool, _climbing, _sauna, _masage;
     std::unique_ptr<InteractiveButton> _npcButton, _shopButton, _fightButton, _showerButton;
-    std::unique_ptr<InteractiveButton> _pressButton, _benchButton, _bikeButton, _treadmillButton;
+    std::unique_ptr<InteractiveButton> _pressButton, _benchButton, _treadmillButton;
 
     Rooms _currentRoom{Rooms::Reception};
     Rooms _previousRoom{Rooms::Reception};

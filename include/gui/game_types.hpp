@@ -3,7 +3,6 @@
 #include "raylib.h"
 #include "gui/item.hpp"
 #include "gui/button.hpp"
-#include <string>
 
 enum class Rooms {
     Reception,
