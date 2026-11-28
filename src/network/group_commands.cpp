@@ -5,7 +5,6 @@
 #include <string_view>
 #include <sys/socket.h>
 #include <unordered_map>
-#include <variant>
 
 void Server::group(Client &client, Command &command) {
   if (command.payload.starts_with("CREATE ")) {
@@ -102,3 +101,5 @@ void Server::join_group(Client &client, Command &command) {
   ::send(client.fd, res.data(), res.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Info, "Player {}: {}", client.player.username, res);
 }
+
+// Il faut que remove le joueur du groupe quand il deco

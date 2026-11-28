@@ -86,6 +86,9 @@ void Server::add_client(int fd, std::string ipv4) {
 
 void Server::remove_client(int fd) {
   logger.log(LogLevel::Info, "{} disconnected.\n", clients.at(fd).ipv4);
+  if (!clients.at(fd).player.group.empty()) {
+    groups.at(clients.at(fd).player.group).members_fd.erase(fd);
+  }
   clients.erase(fd);
 }
 
@@ -232,7 +235,7 @@ bool Server::receive_msg(int fd) {
   }
   // Print every fd in all groups
   for (const auto &[name, group] : groups) {
-    std::println("{}", group.members_fd);
+    std::println("{} {}", group.name, group.members_fd);
   }
   return (true);
 }

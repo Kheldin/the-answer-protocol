@@ -87,6 +87,7 @@ void Server::quit(Client &client, Command &command) {
   static constexpr std::string_view bye{"OK bye\n"};
   ::send(client.fd, bye.data(), bye.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Info, "Player {}: {}", client.player.username, bye);
+  // remove_client(client.fd);
 }
 
 void Server::who(Client &client, Command &command) {
