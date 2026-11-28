@@ -10,7 +10,8 @@
 #include <unordered_map>
 
 void Server::dispatch_command(Client &client, Command &command) {
-  if (command.type != "CONNECT" && client.state != ConState::Authenticated) {
+  if ((command.type != "CONNECT" && command.type != "QUIT") &&
+      client.state != ConState::Authenticated) {
     send_not_auth_err(client.fd);
     return;
   }

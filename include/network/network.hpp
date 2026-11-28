@@ -90,4 +90,5 @@ private:
   void group_invite(Client &client, Command &command);
   int retrieve_fd_by_username(std::string_view username);
   void send_invite(Client &client, Client &target);
+  void join_group(Client &client, Command &command);
 };

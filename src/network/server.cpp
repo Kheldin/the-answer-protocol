@@ -80,14 +80,15 @@ void Server::add_client(int fd, std::string ipv4) {
   if (clients_poll[0].fd == fd) {
     return;
   }
-  logger.log(LogLevel::Info, "New client accepted. IP: {}\n",
-             clients.at(fd).ipv4);
+  logger.log(LogLevel::Info, "New client accepted. IP: {} {}\n",
+             clients.at(fd).ipv4, fd);
 }
 
 void Server::remove_client(int fd) {
-  // Et je dois delete aussi dans le clients_poll je pense ?
-
   logger.log(LogLevel::Info, "{} disconnected.\n", clients.at(fd).ipv4);
+  if (!clients.at(fd).player.group.empty()) {
+    groups.at(clients.at(fd).player.group).members_fd.erase(fd);
+  }
   clients.erase(fd);
 }
 
@@ -215,12 +216,9 @@ bool Server::receive_msg(int fd) {
   errno = 0;
   check = ::recv(clients.at(fd).fd, buffer, sizeof(buffer), MSG_DONTWAIT);
   if (check == 0) {
-    logger.log(LogLevel::Info, "Player {} disconnected properly.\n",
-               client.player.username);
     if (!client.player.group.empty()) {
       groups.at(client.player.group).members_fd.erase(fd);
     }
-    client.state = ConState::Terminated;
     return (false);
   } else if (check < 0) {
     // We have to check these errors even if check event with poll() because of
@@ -236,9 +234,9 @@ bool Server::receive_msg(int fd) {
     process_msg(clients.at(fd));
   }
   // Print every fd in all groups
-  // for (const auto &[name, group] : groups) {
-  //   std::println("{}", group.members_fd);
-  // }
+  for (const auto &[name, group] : groups) {
+    std::println("{} {}", group.name, group.members_fd);
+  }
   return (true);
 }
 
@@ -275,9 +273,9 @@ void Server::run() {
           logger.log(LogLevel::Critical, "Error on fd {}: {}\n",
                      clients_poll[i].fd, std::generic_category().message(err));
         }
+        remove_client(clients_poll[i].fd);
         close(clients_poll[i].fd);
         clients_poll.erase(clients_poll.begin() + i);
-        remove_client(clients_poll[i].fd);
         i--;
       } else if (clients_poll[i].revents & POLLIN) {
         // The index 0 is the server socket.
@@ -286,10 +284,10 @@ void Server::run() {
         if (i == 0) {
           accept_new_client();
         } else {
-          if (!receive_msg(clients_poll.at(i).fd)) {
+          if (!receive_msg(clients_poll[i].fd)) {
+            remove_client(clients_poll[i].fd);
             close(clients_poll[i].fd);
             clients_poll.erase(clients_poll.begin() + i);
-            remove_client(clients_poll[i].fd);
             i--;
           }
         }
