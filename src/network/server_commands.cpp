@@ -10,7 +10,8 @@
 #include <unordered_map>
 
 void Server::dispatch_command(Client &client, Command &command) {
-  if (command.type != "CONNECT" && client.state != ConState::Authenticated) {
+  if ((command.type != "CONNECT" && command.type != "QUIT") &&
+      client.state != ConState::Authenticated) {
     send_not_auth_err(client.fd);
     return;
   }
@@ -87,7 +88,6 @@ void Server::quit(Client &client, Command &command) {
   static constexpr std::string_view bye{"OK bye\n"};
   ::send(client.fd, bye.data(), bye.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
   logger.log(LogLevel::Info, "Player {}: {}", client.player.username, bye);
-  // remove_client(client.fd);
 }
 
 void Server::who(Client &client, Command &command) {
